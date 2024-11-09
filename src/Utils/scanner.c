@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "scanner.h"
 
 int scan_file(char* target_file) {
     //TO:DO add logic for scanning a file 
