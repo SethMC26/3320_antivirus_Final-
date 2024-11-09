@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include "Crypto/fingerprint.h"
+#include "Utils/scanner.h"
 
 //might remove ascii art later but it is kinda fun 
 void printAsciiArt() {
@@ -37,6 +39,7 @@ void printAsciiArt() {
 }
 
 void print_usage(const char *program_name) {
+    test();
     printf("Penguin Protector Usage: \n");
     printf("\nScan for malware \n");
     printf("  %s scan <file_path>\n", program_name);
@@ -125,17 +128,15 @@ int main(int argc, char* argv[]) {
 
     //do target file scan
     if ( target_file != NULL) {
-        printf("scanning file %s \n", target_file);
-        printf("scanning files not implemented yet \n");
+        scan_file(target_file);
     }
     //do target directory scan
-    else if (target_directory) {
-        printf("Scanning directory %s \n", target_directory);
-        printf("scanning directory not implemented yet \n");
+    else if (target_directory != NULL) {
+        scan_dir(target_directory);
     }
     //scan entire file system
     else if ( scan_all ) {
-        printf("Scan all function not implemented yet :(\n" );
+        scan_system();
         //may want to use scanning a directory logic but set directory to "/";
     }
     //add file 

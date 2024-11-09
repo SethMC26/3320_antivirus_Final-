@@ -1,6 +1,6 @@
-# Script created by ChatGPT
-
 #!/bin/bash
+
+#created by chatGPT
 
 # Get the directory of the script (scripts/ directory)
 SCRIPT_DIR="$(dirname "$0")"
@@ -8,18 +8,22 @@ SCRIPT_DIR="$(dirname "$0")"
 # Navigate to the project root by moving up one directory from scripts/
 PROJECT_ROOT="$(realpath "$SCRIPT_DIR/..")"
 
-# Define the source file location and output binary
-SRC_FILE="$PROJECT_ROOT/src/pproc.c"
+# Define the output binary
 OUTPUT_BINARY="pproc"
 
-# Check if pproc.c exists in src directory
-if [ ! -f "$SRC_FILE" ]; then
-    echo "Error: Source file pproc.c not found at $SRC_FILE"
+# Find all .c files in the src directory and its subdirectories
+SRC_FILES=$(find "$PROJECT_ROOT/src" -name "*.c")
+
+# Check if there are any source files
+if [ -z "$SRC_FILES" ]; then
+    echo "Error: No .c files found in the src directory."
     exit 1
 fi
 
-# Compile the source file
-gcc "$SRC_FILE" -o "$OUTPUT_BINARY"
+# Compile the source files
+gcc -I"$PROJECT_ROOT/src" $SRC_FILES -o "$OUTPUT_BINARY"
+
+# Check if compilation succeeded
 if [ $? -ne 0 ]; then
     echo "Compilation failed."
     exit 1
