@@ -1,16 +1,51 @@
 #include <stdio.h>
 #include <string.h>
 
+//might remove ascii art later but it is kinda fun 
+void printAsciiArt() {
+    const char *asciiArt[] = {
+        "                        @%%  += ",
+        "                     @@ @%%%#+.%",
+        "                    **#####*%#.%",
+        "                    *+#@##*=%+.%",
+        "                     =+###*==:.%",
+        "              @%     +=+%@%@%:=%",
+        "              =+      =+##+*#.#%",
+        "   %#+  @%#+--:#*      ##%-+@@@ ",
+        "    ##+#%*-......+       %-+%   ",
+        "      @%*==-=*#*#@        -*%   ",
+        "     %##@@%#*+--=%@       =*#   ",
+        "       @@@@%#+=-=%@@@     *+#   ",
+        "        @@@@%+...=%%@@@   #=*   ",
+        "   %#+++=:.::......+@@@@@ @%%@  ",
+        " @###****++-.........+@@@@@%%@  ",
+        "@%########*+=-........+@@@@@%@@ ",
+        "%##%######*#*+=.......:%@@ @%@  ",
+        "#*#%%###++###*+=.......=@@ %%@@ ",
+        "#=*@@%%#######*=-......=@@      ",
+        "#+#@@%%%#####*=-.....+@@@      ",
+        "  %%%%%%%%##*+*#*#%@@@@@@       ",
+        "   @@@@@%%%%%@@@@@@@@@@@        ",
+        "       @@@%#**+=+ #++==+#       ",
+        "          #%%#%@@  @@@@@@    "
+    };
+
+    int size = sizeof(asciiArt) / sizeof(asciiArt[0]);
+    for (int i = 0; i < size; i++) {
+        printf("%s\n", asciiArt[i]);
+    }
+}
+
 void print_usage(const char *program_name) {
-    printf("Usage: \n");
-    printf("\nScan for viruses \n");
+    printf("Penguin Protector Usage: \n");
+    printf("\nScan for malware \n");
     printf("  %s scan <file_path>\n", program_name);
     printf("  %s scan --all\n", program_name);
     printf("  %s scan --directory\n", program_name);
     printf("Options:\n");
-    printf("  -a, --all\t\tScan entire system for viruses.\n");
+    printf("  -a, --all\t\tScan entire system for malware.\n");
     printf("  -d, -dir, --directory\tScan files within a directory.\n");
-    printf("\nAdd file to thingy mickgiger\n");
+    printf("\nAdd file to whitelist\n");
     printf("  %s add <file_path>\n", program_name);
     printf("\nDisplay this message\n");
     printf("  %s --help\n", program_name);
@@ -31,7 +66,7 @@ int main(int argc, char* argv[]) {
 
     //catch case of not enough args to avoid undefined behavoir
     if (argc < 2) {
-        printf("Error: Too few arguments.\n");
+        printAsciiArt();
         print_usage(argv[0]);
         return 0;
     }
