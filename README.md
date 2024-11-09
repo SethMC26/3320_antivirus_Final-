@@ -1,6 +1,12 @@
 # Penguin Protector Anti-Malware 
 
 # Quick start
+## Using build script 
+``bash 
+git clone https://github.com/SethMC26/FeatherstoneVaranoHoltzman_3320_Final.git
+
+./scripts/build.sh
+## Steps for manual instillation 
 ```bash
 #clone repo
 git clone https://github.com/SethMC26/FeatherstoneVaranoHoltzman_3320_Final.git
