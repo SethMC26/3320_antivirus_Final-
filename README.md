@@ -1,4 +1,7 @@
 # Penguin Protector Anti-Malware 
+<img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Pax_tux.png" alt="Penguin Protector Logo" width="150"/>
+
+Welcome to Penguin Protector, an anti-malware tool for Linux! To keep all of our Penguin friends safe from harm.
 
 # Quick start
 ## Using build script 
@@ -19,6 +22,8 @@ sudo mv pproc /usr/local/bin/pproc
 ```
 
 # Usage 
+
+## Scan for Malware
 Scan a file 
 ```bash
 pproc scan <file_path>
@@ -37,6 +42,7 @@ pproc scan -a
 pproc scan --all
 ```
 
+## Add files to whitelist 
 Add to whitelist?(still WIP) 
 ```bash
 pproc add <file_path>
