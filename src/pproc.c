@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include "Crypto/fingerprint.h"
 #include "Utils/scanner.h"
 
 //might remove ascii art later but it is kinda fun 
