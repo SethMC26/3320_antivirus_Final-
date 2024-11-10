@@ -1,11 +1,10 @@
 #include <stdio.h>
 #include <string.h>
-#include "Crypto/fingerprint.h"
 #include "Utils/scanner.h"
 
 //might remove ascii art later but it is kinda fun 
 void printAsciiArt() {
-    const char *asciiArt[] = {
+    const char* asciiArt[] = {
         "                        @%%  += ",
         "                     @@ @%%%#+.%",
         "                    **#####*%#.%",
@@ -39,7 +38,6 @@ void printAsciiArt() {
 }
 
 void print_usage(const char *program_name) {
-    test();
     printf("Penguin Protector Usage: \n");
     printf("\nScan for malware \n");
     printf("  %s scan <file_path>\n", program_name);
@@ -83,7 +81,7 @@ int main(int argc, char* argv[]) {
     if ((strcmp(argv[1], "scan") == 0 )) {
         //catch lack of arguments
         if (argc < 3) {
-            printf("Error: Missing argument for 'scan'.\n");
+            fprintf(stderr, "Error: Missing argument for 'scan'.\n");
             print_usage(argv[0]);
             return 1;
         }
@@ -94,34 +92,33 @@ int main(int argc, char* argv[]) {
         //scan directory
         else if ((strcmp(argv[2], "-d") == 0) || (strcmp(argv[2], "-dir") == 0) || (strcmp(argv[2], "--directory") == 0)) {
             if (argc < 4) {
-                printf("Error: Missing directory for 'scan %s'.\n", argv[2]);
+                fprintf(stderr, "Error: Missing directory for 'scan %s'.\n", argv[2]);
                 print_usage(argv[0]);
                 return 1;
             }
             target_directory = argv[3];
         }
         else if (argv[2][0] == '-') {
-            printf("Error: No argument %s exists\n", argv[2]);
+            fprintf(stderr, "Error: No argument %s exists\n", argv[2]);
             print_usage(argv[0]);
             return 1;
         }
         //scan a single file
         else {
             target_file = argv[2];
-            printf("Target_File %s\n", target_file);
         }
     }
     //add file to white list 
     else if ((strcmp(argv[1], "add") == 0 )) {
         if (argc < 3) {
-            printf("Error: Missing argument for 'add'.\n");
+            fprintf(stderr,"Error: Missing argument for 'add'.\n");
             print_usage(argv[0]);
             return 1;
         }
         file_to_add = argv[2];
     }
     else {
-        printf("Error: Unrecognized option '%s'.\n", argv[1]);
+        fprintf(stderr, "Error: Unrecognized option '%s'.\n", argv[1]);
         print_usage(argv[0]);
         return 1;
     }
@@ -145,7 +142,7 @@ int main(int argc, char* argv[]) {
         printf("Adding files not implemented\n");
     }
     else {
-        printf("Error: No valid arguments provided.\n");
+        fprintf(stderr, "Error: No valid arguments provided.\n");
         print_usage(argv[0]);
         return 1;
     }
