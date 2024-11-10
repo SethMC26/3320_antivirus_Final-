@@ -1,15 +1,17 @@
-//header guard to prevent multiple defines
+//size of raw has outputs 
+
 #define SHA1_LENGTH 20
 #define SHA256_LENGTH 32
 #define MD5_LENGTH 16 
 
-
+//size of buffer needed for to store sha-1 hash or fingerprint 
 #define SHA1_BUFFER_SIZE 41
+//size of buffer needed for to store sha-256 hash or fingerprint 
 #define SHA256_BUFFER_SIZE 65
+//size of buffer needed for to store md5 hash or fingerprint 
 #define MD5_BUFFER_SIZE 33
 
-
-
+//header guard to prevent multiple defines
 #ifndef FINGERPRINT_H
 #define FINGERPRINT_H
 
