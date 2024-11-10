@@ -106,7 +106,6 @@ int main(int argc, char* argv[]) {
         //scan a single file
         else {
             target_file = argv[2];
-            printf("Target_File %s\n", target_file);
         }
     }
     //add file to white list 

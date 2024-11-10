@@ -1,6 +1,7 @@
 #!/bin/bash
 
 #created by chatGPT
+echo "Starting install"
 
 # Get the directory of the script (scripts/ directory)
 SCRIPT_DIR="$(dirname "$0")"
@@ -44,3 +45,10 @@ sudo mkdir -p /usr/local/share/pproc
 
 # copy hashes data to data directory 
 sudo cp "$PROJECT_ROOT/hashes/sha1-hashes.txt" /usr/local/share/pproc/sha1-hashes.txt
+echo "sha1 hashes copied to /usr/local/share/pproc/sha1-hashes.txt"
+sudo cp "$PROJECT_ROOT/hashes/sha256-hashes.txt" /usr/local/share/pproc/sha256-hashes.txt
+echo "sha256 hashes copied to /usr/local/share/pproc/sha256-hashes.txt"
+sudo cp "$PROJECT_ROOT/hashes/md5-hashes.txt" /usr/local/share/pproc/md5-hashes.txt
+echo "md5 hashes copied to /usr/local/share/pproc/md5-hashes.txt"
+
+echo "Program successfully installed"
