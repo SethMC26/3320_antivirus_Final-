@@ -20,8 +20,8 @@ if [ -z "$SRC_FILES" ]; then
     exit 1
 fi
 # Compile the source files
-#gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" $SRC_FILES -o "$OUTPUT_BINARY" -lcrypto
-gcc -I"$PROJECT_ROOT/src" $SRC_FILES -o "$OUTPUT_BINARY" -lcrypto
+gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" $SRC_FILES -o "$OUTPUT_BINARY" -lcrypto
+#gcc -I"$PROJECT_ROOT/src" $SRC_FILES -o "$OUTPUT_BINARY" -lcrypto
 
 # Check if compilation succeeded
 if [ $? -ne 0 ]; then
