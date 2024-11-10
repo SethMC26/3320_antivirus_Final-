@@ -6,6 +6,15 @@
 
 #include "fingerprint.h"
 
+//private method not included in header so we declare it here 
+
+/**
+ * Computes a hash of a file from openssl library 
+ * @param target_file String with target_file 
+ * @param hash_buffer char array to write output hash into must be size hash_length * 2 + 1
+ */
+int compute_hash(char* target_file, char* hash_buffer, const EVP_MD* hashing_algorithm, unsigned int hash_length);
+
 int compare_hashes(char* hash1, char* hash2) {
     return strcmp(hash1, hash2);
 }
@@ -23,13 +32,7 @@ int md5_fingerprint_file(char* target_file, char* hash_buffer) {
 }
 
 
-/**
- * Computes a hash of a file from openssl library 
- * @param target_file String with target_file 
- * @param hash_buffer char array to write output hash into must be size hash_length * 2 + 1
- */
-int compute_hash(char* target_file, char* hash_buffer, EVP_MD* hashing_algorithm, unsigned int hash_length) {
-    printf("computing hash...");
+int compute_hash(char* target_file, char* hash_buffer, const EVP_MD* hashing_algorithm, unsigned int hash_length) {
     FILE* file = fopen(target_file, "rb");
     if (!file) {
         perror("Error opening file ");
@@ -41,7 +44,7 @@ int compute_hash(char* target_file, char* hash_buffer, EVP_MD* hashing_algorithm
     //catch errors while creating context 
     if (!mdctx){ 
         fclose(file);
-        fprintf(stderr, "Error in Fingerprint: Cannot create context");
+        fprintf(stderr, "Error in Fingerprint: Cannot create context\n");
         return 1;
     }
 
@@ -49,7 +52,7 @@ int compute_hash(char* target_file, char* hash_buffer, EVP_MD* hashing_algorithm
     if (EVP_DigestInit_ex(mdctx, hashing_algorithm, NULL) != 1 ) {
         EVP_MD_CTX_free(mdctx);
         fclose(file);
-        fprintf(stderr, "Error in Fingerprint: Cannot initialize context");
+        fprintf(stderr, "Error in Fingerprint: Cannot initialize context\n");
         return 1;
     }
 
