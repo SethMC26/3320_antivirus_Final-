@@ -33,6 +33,7 @@ int md5_fingerprint_file(char* target_file, char* hash_buffer) {
 
 
 int compute_hash(char* target_file, char* hash_buffer, const EVP_MD* hashing_algorithm, unsigned int hash_length) {
+    //open file to compute hash of 
     FILE* file = fopen(target_file, "rb");
     if (!file) {
         perror("Error opening file ");

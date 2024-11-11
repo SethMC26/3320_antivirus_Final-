@@ -7,7 +7,15 @@
 
 //private method not included in header so we declare it here 
 
-int scan_hashes(char* target_hash, char* hash_file, int hash_buffer_size);
+/**
+ * Scans over a list of hashes stored in file to see if any match target hash
+ * @param target_hash String of hash to check for
+ * @param hash_file String of file with hash list
+ * @param hash_buffer_size Size of buffer needed for hash
+ * 
+ * @returns 0 if succesfully 1 otherwise
+ */
+int scan_hashes(char* target_hash, char* hash_file, unsigned int hash_buffer_size);
 
 int scan_file(char* target_file) {
     //TO:DO add logic for scanning a file 
@@ -20,6 +28,7 @@ int scan_file(char* target_file) {
 
     printf("Starting File Scan for %s \n", target_file);
 
+    //scan over sha1 hashes
     printf("Scanning sha-1 hashes..."); 
     
     if (sha1_fingerprint_file(target_file, target_sha1_hash) != 0 ) {
@@ -33,7 +42,8 @@ int scan_file(char* target_file) {
     }
 
     printf("[DONE]\n");
-
+    
+    //scan over sha256 hashes
     printf("Scanning sha-256 hashes...");
 
     if (sha256_fingerprint_file(target_file, target_sha256_hash) != 0 ) {
@@ -47,6 +57,7 @@ int scan_file(char* target_file) {
 
     printf("[DONE]\n");
     
+    //scan over md5 hashes 
     printf("Scanning md5 hashes...");
 
     if (md5_fingerprint_file(target_file, target_md5_hash) != 0)  {
@@ -81,7 +92,7 @@ int scan_system() {
     return 0;
 }
 
-int scan_hashes(char* target_hash, char* hash_file, int hash_buffer_size) {
+int scan_hashes(char* target_hash, char* hash_file, unsigned int hash_buffer_size) {
     //current hash in hash list 
     char* current_hash = malloc(hash_buffer_size);
 
