@@ -6,6 +6,7 @@
 
 #include "fingerprint.h"
 
+#define FILE_BUFF_SIZE 4096
 //private method not included in header so we declare it here 
 
 /**
@@ -58,10 +59,10 @@ int compute_hash(char* target_file, char* hash_buffer, const EVP_MD* hashing_alg
     }
 
     //create a buffer for reading in data from file 
-    unsigned char buffer[4096]; 
+    unsigned char buffer[FILE_BUFF_SIZE]; 
     size_t bytes_read;
     //create hash from all bytes in file 
-    while((bytes_read = fread(buffer, 1, sizeof(buffer), file) > 0)) {
+    while((bytes_read = fread(buffer, 1, FILE_BUFF_SIZE, file)) > 0) {
         //update message digest and check for erros
         if (EVP_DigestUpdate(mdctx, buffer, bytes_read) != 1) {
             EVP_MD_CTX_free(mdctx);

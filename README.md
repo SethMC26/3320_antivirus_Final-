@@ -4,23 +4,11 @@
 Welcome to Penguin Protector, an anti-malware tool for Linux! To keep all of our Penguin friends safe from harm.
 
 # Quick start
-## Using build script 
+## Using install script  
 ```bash 
 git clone https://github.com/SethMC26/FeatherstoneVaranoHoltzman_3320_Final.git
 
 ./scripts/build.sh
-```
-
-## Manual install 
-```bash
-#clone repo
-git clone https://github.com/SethMC26/FeatherstoneVaranoHoltzman_3320_Final.git
-
-#compile program
-gcc src/pproc.c -o pproc
-
-#add to user's local binaries
-sudo mv pproc /usr/local/bin/pproc
 ```
 
 # Usage 
@@ -102,5 +90,10 @@ Options:
   -h, --help		Display this help message.
 
 ```
+# Features
+- Scans files against over 70,000 known malicious hashes
+- Quarantines and removes malicious files
 
-
+# Sources 
+- The malicious hash files list has been sourced [here](https://github.com/romainmarcoux/malicious-hash)
+- Logo for the project [here](https://commons.wikimedia.org/wiki/File:Pax_tux.png) with license [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
