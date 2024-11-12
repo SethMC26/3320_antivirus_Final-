@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+
 #include "Crypto/fingerprint.h"
 
 #include "scanner.h"
@@ -135,11 +137,32 @@ int scan_hashes(char* target_hash, char* target_file, char* hash_file, unsigned 
     while(fgets(current_hash, hash_buffer_size, hashes)) {
         //printf("%s\n", current_hash);
         //if file malicious file is detected ask user if we should remove it
-        if (strcmp(current_hash, target_hash) == 0) {
+        if (strcmp(current_hash, target_hash) == 0  ) {
+            //quarantine file by removing execute permissions 
+            struct stat file_stat;
+            unsigned int file_permissions; 
+            
+            //save orignal file permissions in case we should restore
+            if (stat(target_file, &file_stat) == -1) {
+                perror("Could not stat file");
+                return -1;
+
+            }
+
+            file_permissions = file_stat.st_mode;
+
+            //set file to readonly mode 
+            if (chmod(target_file, S_IRUSR | S_IRGRP | S_IROTH) == -1) {
+                perror("Failed to change file permissions");
+                return 1;
+            }       
+
             printf("\n\nPossible malicious file detected: %s \n", target_file);
-    
+            
             switch(get_user_input("Would you like to remove the file Y/N:")) {
                 case 0:
+                    //restore file permissions 
+                    chmod(target_file, file_permissions);
                     //add to white list
                     printf("Add file to white list feature not implemented\n");
                     break;
