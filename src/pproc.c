@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+
 #include "Utils/scanner.h"
 
 //might remove ascii art later but it is kinda fun 
@@ -105,6 +107,12 @@ int main(int argc, char* argv[]) {
         }
         //scan a single file
         else {
+            //check if file exists
+            if (access(argv[2], F_OK) == -1) {
+                fprintf(stderr, "Error: Could not find file %s\n", argv[2]);
+                print_usage(argv[0]);
+                return 1;
+            } 
             target_file = argv[2];
         }
     }
