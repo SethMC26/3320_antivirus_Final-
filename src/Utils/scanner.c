@@ -6,6 +6,28 @@
 #include "Crypto/fingerprint.h"
 
 #include "scanner.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <pthread.h>
+#include <dirent.h>
+#include <unistd.h>
+
+#include "Crypto/fingerprint.h"
+#include "scanner.h"
+#include <linux/limits.h>
+
+// Thread data structure to hold the file or directory path
+typedef struct {
+    char *path;
+    int is_directory;  // 1 if directory, 0 if file
+} thread_data_t;
+
+#define MAX_THREADS 10  // Max number of concurrent threads to avoid overload
+
+// Mutex for synchronization
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 //private method not included in header so we declare it here 
 
@@ -107,18 +129,114 @@ int scan_file(char* target_file) {
 }
 
 
-int scan_dir(char* target_dir) {
- //TO:DO add logic for scanning a file 
-    //may want to change how return works as needed 
-    printf("Scanning directory %s \n", target_dir);
-    printf("Scan directory not implemeted yet\n");
-    return 0;
+void* scan_file_thread(void* arg) {
+    thread_data_t* data = (thread_data_t*)arg;
+
+    if (!data->is_directory) {
+        printf("Scanning file: %s\n", data->path);
+        scan_file(data->path);  // Call your existing scan_file function
+    }
+
+    free(data->path);  // Free the allocated memory for the path
+    free(data);        // Free the thread data structure
+    pthread_exit(NULL);
 }
 
+/**
+ * Scans a directory and spawns threads to scan its files
+ * @param target_dir String of target directory to scan
+ * @return int 0 if success, 1 if error
+ */
+int scan_dir(char* target_dir) {  
+    DIR* dir = opendir(target_dir);
+    if (dir == NULL) {
+        perror("Error opening directory");
+        return 1;  // Return 1 for error
+    }
+
+    struct dirent* entry;
+    pthread_t threads[MAX_THREADS];  // Array of threads
+    int thread_count = 0;
+
+    // Iterate over each entry in the directory
+    while ((entry = readdir(dir)) != NULL) {
+        // Skip "." and ".."
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        // Construct the full path of the entry
+        char path[PATH_MAX];
+        snprintf(path, sizeof(path), "%s/%s", target_dir, entry->d_name);
+
+        struct stat statbuf;
+        if (stat(path, &statbuf) == -1) {
+            perror("Error getting file status");
+            continue;
+        }
+
+        // Check if it's a directory or a file
+        if (S_ISDIR(statbuf.st_mode)) {
+            // If it's a directory, recursively scan it (also threaded)
+            thread_data_t* data = malloc(sizeof(thread_data_t));
+            data->path = strdup(path);
+            data->is_directory = 1;
+
+            // Check if we have space to create a new thread
+            if (thread_count < MAX_THREADS) {
+                pthread_create(&threads[thread_count], NULL, scan_file_thread, (void*)data);
+                thread_count++;
+            } else {
+                // If max threads reached, wait for some to finish
+                for (int i = 0; i < MAX_THREADS; i++) {
+                    pthread_join(threads[i], NULL);
+                }
+                // Reset thread counter
+                thread_count = 0;
+            }
+        } else {
+            // If it's a file, scan it
+            thread_data_t* data = malloc(sizeof(thread_data_t));
+            data->path = strdup(path);
+            data->is_directory = 0;
+
+            // Check if we have space to create a new thread
+            if (thread_count < MAX_THREADS) {
+                pthread_create(&threads[thread_count], NULL, scan_file_thread, (void*)data);
+                thread_count++;
+            } else {
+                // If max threads reached, wait for some to finish
+                for (int i = 0; i < MAX_THREADS; i++) {
+                    pthread_join(threads[i], NULL);
+                }
+                // Reset thread counter
+                thread_count = 0;
+            }
+        }
+    }
+
+    // Wait for all threads to finish
+    for (int i = 0; i < thread_count; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    closedir(dir);
+    return 0;  // Return 0 for success
+}
+
+/**
+ * Scans the entire system by calling scan_dir on the root directory
+ * @return int 0 if success, 1 if error
+ */
 int scan_system() {
-    printf("Starting system scan...");
-    printf("System scan not implemented yet\n"); 
-    return 0;
+    printf("Starting system scan...\n");
+    int result = scan_dir("/");  // Scan from root directory
+    if (result == 0) {
+        printf("System scan completed successfully.\n");
+    } else {
+        printf("System scan failed.\n");
+    }
+    return result;  // Return the result from scan_dir
 }
 
 int scan_hashes(char* target_hash, char* target_file, char* hash_file, unsigned int hash_buffer_size) {
