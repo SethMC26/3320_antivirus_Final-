@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include "Utils/logger.h"
 #include "Utils/scanner.h"
 
 //might remove ascii art later but it is kinda fun 
@@ -58,6 +60,27 @@ void print_usage(const char *program_name) {
 
 
 int main(int argc, char* argv[]) {
+    // Initialize logger with default settings
+    char log_file_path[512];
+
+    if (geteuid() != 0) {
+        fprintf(stderr, "Warning: Not running as root. Logging to ~/pproc.log instead\n");
+        // Expand ~ to home directory
+        const char *home = getenv("HOME");
+        if (home == NULL) {
+            fprintf(stderr, "Cannot determine home directory\n");
+            return 1;
+        }
+        snprintf(log_file_path, sizeof(log_file_path), "%s/pproc.log", home);
+        init_logger(log_file_path, LL_INFO, LL_DEBUG);
+    } else {
+        init_logger("/var/log/pproc.log", LL_INFO, LL_DEBUG);
+    }
+    
+    // Test logging system
+    log_message(LL_INFO, "Penguin Protector started");
+    log_message(LL_DEBUG, "Debug logging enabled");
+    
     //file to scan
     char* target_file = NULL;
     //directory to scan
@@ -155,5 +178,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Log program end
+    log_message(LL_INFO, "Penguin Protector shutting down");
+    cleanup_logger();
     return 0;
 }

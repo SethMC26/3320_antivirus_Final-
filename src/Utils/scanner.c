@@ -2,21 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-
-#include "Crypto/fingerprint.h"
-
-#include "scanner.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
 #include <pthread.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <linux/limits.h>
 
 #include "Crypto/fingerprint.h"
+#include "Utils/logger.h"
 #include "scanner.h"
-#include <linux/limits.h>
 
 // Thread data structure to hold the file or directory path
 typedef struct
@@ -63,73 +56,72 @@ int scan_file(char *target_file)
     char target_md5_hash[MD5_BUFFER_SIZE];
     int scan_result;
 
-    printf("Starting File Scan for %s \n", target_file);
+    log_message(LL_INFO, "Starting File Scan for %s", target_file);
 
     // scan over sha1 hashes
-    printf("Scanning sha-1 hashes...");
+    log_message(LL_DEBUG, "Scanning sha-1 hashes for %s", target_file);
 
-    if (sha1_fingerprint_file(target_file, target_sha1_hash) != 0)
-    {
-        fprintf(stderr, "\nError: sha-1 file fingerprint failed\n");
+    if (sha1_fingerprint_file(target_file, target_sha1_hash) != 0) {
+        log_message(LL_ERROR, "sha-1 file fingerprint failed for %s", target_file);
         return 1;
     }
 
     scan_result = scan_hashes(target_sha1_hash, target_file, "/usr/local/share/pproc/sha1-hashes.txt", SHA1_BUFFER_SIZE);
-    if (scan_result == 1)
-    {
+    if (scan_result == 1) {
+        log_message(LL_WARNING, "Malicious file detected (SHA1) in %s", target_file);
         return 0;
-    }
-    else if (scan_result == -1)
-    {
-        fprintf(stderr, "Error: Could not scan sha1 hash list\n");
+    } else if (scan_result == -1) {
+        log_message(LL_ERROR, "Could not scan sha1 hash list for %s", target_file);
         return 1;
     }
 
-    printf("[DONE]\n");
+    log_message(LL_DEBUG, "SHA1 scan complete for %s", target_file);
 
     // scan over sha256 hashes
-    printf("Scanning sha-256 hashes...");
+    log_message(LL_DEBUG, "Scanning sha-256 hashes for %s", target_file);
 
     if (sha256_fingerprint_file(target_file, target_sha256_hash) != 0)
     {
-        fprintf(stderr, "Error: sha-256 file fingerprint failed\n");
+        log_message(LL_ERROR, "sha-256 file fingerprint failed for %s", target_file);
         return 1;
     }
 
     scan_result = scan_hashes(target_sha256_hash, target_file, "/usr/local/share/pproc/sha256-hashes.txt", SHA256_BUFFER_SIZE);
     if (scan_result == 1)
     {
+        log_message(LL_WARNING, "Malicious file detected (SHA256) in %s", target_file);
         return 0;
     }
     else if (scan_result == -1)
     {
-        fprintf(stderr, "Error: Could not scan sha-256 hash list\n");
+        log_message(LL_ERROR, "Could not scan sha-256 hash list for %s", target_file);
         return 1;
     }
 
-    printf("[DONE]\n");
+    log_message(LL_DEBUG, "SHA256 scan complete for %s", target_file);
 
     // scan over md5 hashes
-    printf("Scanning md5 hashes...");
+    log_message(LL_DEBUG, "Scanning md5 hashes for %s", target_file);
 
     if (md5_fingerprint_file(target_file, target_md5_hash) != 0)
     {
-        fprintf(stderr, "Error: md5 file fingerprint failed\n");
+        log_message(LL_ERROR, "md5 file fingerprint failed for %s", target_file);
         return 1;
     }
 
     scan_result = scan_hashes(target_md5_hash, target_file, "/usr/local/share/pproc/md5-hashes.txt", MD5_BUFFER_SIZE);
     if (scan_result == 1)
     {
+        log_message(LL_WARNING, "Malicious file detected (MD5) in %s", target_file);
         return 0;
     }
     else if (scan_result == -1)
     {
-        fprintf(stderr, "Error: Could not scan sha-256 hash list\n");
+        log_message(LL_ERROR, "Could not scan sha-256 hash list for %s", target_file);
         return 1;
     }
 
-    printf("[DONE]\n");
+    log_message(LL_DEBUG, "MD5 scan complete for %s", target_file);
 
     printf("DEBUG: sha-1 hash: %s \n", target_sha1_hash);
     printf("DEBUG: sha-256 hash: %s \n", target_sha256_hash);
@@ -163,14 +155,15 @@ int scan_dir(char *target_dir)
     DIR *dir = opendir(target_dir);
     if (dir == NULL)
     {
-        perror("Error opening directory");
-        return 1; // Return 1 for error
+        log_message(LL_ERROR, "Error opening directory: %s", target_dir);
+        return 1;
     }
 
     struct dirent *entry;
     pthread_t threads[MAX_THREADS]; // Array of threads
     int thread_count = 0;
-    printf("Scanning directory: %s\n", target_dir); // Print the directory being scanned
+    
+    log_message(LL_INFO, "Scanning directory: %s", target_dir);
 
     // Iterate over each entry in the directory
     while ((entry = readdir(dir)) != NULL)
@@ -188,7 +181,7 @@ int scan_dir(char *target_dir)
         struct stat statbuf;
         if (stat(path, &statbuf) == -1)
         {
-            perror("Error getting file status");
+            log_message(LL_ERROR, "Error getting file status for %s", path);
             continue;
         }
 
@@ -284,27 +277,23 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
     // open list of malicious hashes
     FILE *hashes = fopen(hash_file, "r");
 
-    if (hashes == NULL)
-    {
-        fprintf(stderr, "Error: Could not find hash file %s\n", hash_file);
+    if (hashes == NULL) {
+        log_message(LL_ERROR, "Could not find hash file %s", hash_file);
         return -1;
     }
 
     // go line by line through malicious hashes and see if the file hash matches
-    while (fgets(current_hash, hash_buffer_size, hashes))
-    {
-        // printf("%s\n", current_hash);
+    while (fgets(current_hash, hash_buffer_size, hashes)) {
         // if file malicious file is detected ask user if we should remove it
-        if (strcmp(current_hash, target_hash) == 0)
-        {
-            // quarantine file by removing execute permissions
+        if (strcmp(current_hash, target_hash) == 0) {
+            log_message(LL_WARNING, "Malicious file detected: %s", target_file);
+            
+            // save original file permissions in case we should restore
             struct stat file_stat;
             unsigned int file_permissions;
 
-            // save orignal file permissions in case we should restore
-            if (stat(target_file, &file_stat) == -1)
-            {
-                perror("Could not stat file");
+            if (stat(target_file, &file_stat) == -1) {
+                log_message(LL_ERROR, "Could not stat file %s", target_file);
                 return -1;
             }
 
