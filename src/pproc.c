@@ -61,25 +61,28 @@ void print_usage(const char *program_name) {
 
 int main(int argc, char* argv[]) {
     // Initialize logger with default settings
-    char log_file_path[512];
-
-    if (geteuid() != 0) {
-        fprintf(stderr, "Warning: Not running as root. Logging to ~/pproc.log instead\n");
-        // Expand ~ to home directory
-        const char *home = getenv("HOME");
-        if (home == NULL) {
-            fprintf(stderr, "Cannot determine home directory\n");
-            return 1;
-        }
-        snprintf(log_file_path, sizeof(log_file_path), "%s/pproc.log", home);
-        init_logger(log_file_path, LL_INFO, LL_DEBUG);
-    } else {
-        init_logger("/var/log/pproc.log", LL_INFO, LL_DEBUG);
-    }
+    init_logger("/var/log/pproc.log", LL_INFO, LL_DEBUG);
     
     // Test logging system
     log_message(LL_INFO, "Penguin Protector started");
     log_message(LL_DEBUG, "Debug logging enabled");
+    
+    // At program startup (after logger init)
+    log_message(LL_INFO, "Penguin Protector v1.0 starting up");
+    log_message(LL_DEBUG, "Command line arguments: argc=%d", argc);
+    for (int i = 0; i < argc; i++) {
+        log_message(LL_DEBUG, "argv[%d]: %s", i, argv[i]);
+    }
+    
+    // Before root check
+    log_message(LL_DEBUG, "Checking root privileges...");
+    
+    // After root check
+    if (geteuid() != 0) {
+        log_message(LL_WARNING, "Running without root privileges - limited functionality");
+    } else {
+        log_message(LL_INFO, "Running with root privileges");
+    }
     
     //file to scan
     char* target_file = NULL;
@@ -104,9 +107,11 @@ int main(int argc, char* argv[]) {
 
     //scan command 
     if ((strcmp(argv[1], "scan") == 0 )) {
+        log_message(LL_INFO, "Scan command received");
+        
         //catch lack of arguments
         if (argc < 3) {
-            fprintf(stderr, "Error: Missing argument for 'scan'.\n");
+            log_message(LL_ERROR, "Error: Missing argument for 'scan'.");
             print_usage(argv[0]);
             return 1;
         }
@@ -117,14 +122,14 @@ int main(int argc, char* argv[]) {
         //scan directory
         else if ((strcmp(argv[2], "-d") == 0) || (strcmp(argv[2], "-dir") == 0) || (strcmp(argv[2], "--directory") == 0)) {
             if (argc < 4) {
-                fprintf(stderr, "Error: Missing directory for 'scan %s'.\n", argv[2]);
+                log_message(LL_ERROR, "Error: Missing directory for 'scan %s'.", argv[2]);
                 print_usage(argv[0]);
                 return 1;
             }
             target_directory = argv[3];
         }
         else if (argv[2][0] == '-') {
-            fprintf(stderr, "Error: No argument %s exists\n", argv[2]);
+            log_message(LL_ERROR, "Error: No argument %s exists", argv[2]);
             print_usage(argv[0]);
             return 1;
         }
@@ -132,7 +137,7 @@ int main(int argc, char* argv[]) {
         else {
             //check if file exists
             if (access(argv[2], F_OK) == -1) {
-                fprintf(stderr, "Error: Could not find file %s\n", argv[2]);
+                log_message(LL_ERROR, "Error: Could not find file %s", argv[2]);
                 print_usage(argv[0]);
                 return 1;
             } 
@@ -142,14 +147,14 @@ int main(int argc, char* argv[]) {
     //add file to white list 
     else if ((strcmp(argv[1], "add") == 0 )) {
         if (argc < 3) {
-            fprintf(stderr,"Error: Missing argument for 'add'.\n");
+            log_message(LL_ERROR, "Error: Missing argument for 'add'.");
             print_usage(argv[0]);
             return 1;
         }
         file_to_add = argv[2];
     }
     else {
-        fprintf(stderr, "Error: Unrecognized option '%s'.\n", argv[1]);
+        log_message(LL_ERROR, "Error: Unrecognized option '%s'.", argv[1]);
         print_usage(argv[0]);
         return 1;
     }
@@ -169,11 +174,11 @@ int main(int argc, char* argv[]) {
     }
     //add file 
     else if ( file_to_add != NULL) {
-        printf("adding file %s\n", file_to_add);
-        printf("Adding files not implemented\n");
+        log_message(LL_INFO, "Adding file %s", file_to_add);
+        log_message(LL_INFO, "Adding files not implemented");
     }
     else {
-        fprintf(stderr, "Error: No valid arguments provided.\n");
+        log_message(LL_ERROR, "Error: No valid arguments provided.");
         print_usage(argv[0]);
         return 1;
     }
