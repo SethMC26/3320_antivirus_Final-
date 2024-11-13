@@ -5,6 +5,7 @@
 
 #include "Utils/logger.h"
 #include "Utils/scanner.h"
+#include <linux/limits.h>
 
 //might remove ascii art later but it is kinda fun 
 void printAsciiArt() {
@@ -50,6 +51,12 @@ void print_usage(const char *program_name) {
     printf("Options:\n");
     printf("  -a, --all\t\tScan entire system for malware.\n");
     printf("  -d, -dir, --directory\tScan files within a directory.\n");
+    printf("\nVerbosity Options:\n");
+    printf("  -v, --verbose\t\tSet verbosity level (default: info)\n");
+    printf("    error\t\tShow only errors\n");
+    printf("    warning\t\tShow errors and warnings\n");
+    printf("    info\t\tShow errors, warnings, and info\n");
+    printf("    debug\t\tShow all messages\n");
     printf("\nAdd file to whitelist\n");
     printf("  %s add <file_path>\n", program_name);
     printf("\nDisplay this message\n");
@@ -60,13 +67,44 @@ void print_usage(const char *program_name) {
 
 
 int main(int argc, char* argv[]) {
-    // Initialize logger with default settings
-    init_logger("/var/log/pproc.log", LL_DEBUG, LL_DEBUG); // show all logs
+    // Default verbosity level
+    LogLevel verbosity = LL_INFO;
     
-    // Test logging system
-    log_message(LL_INFO, "Penguin Protector started");
-    log_message(LL_DEBUG, "Debug logging enabled");
-    
+    // Parse verbosity flag before initializing logger
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
+            if (i + 1 < argc) {
+                if (strcmp(argv[i + 1], "error") == 0) {
+                    verbosity = LL_ERROR;
+                } else if (strcmp(argv[i + 1], "warning") == 0) {
+                    verbosity = LL_WARNING;
+                } else if (strcmp(argv[i + 1], "info") == 0) {
+                    verbosity = LL_INFO;
+                } else if (strcmp(argv[i + 1], "debug") == 0) {
+                    verbosity = LL_DEBUG;
+                } else {
+                    fprintf(stderr, "Invalid verbosity level. Using default (info)\n");
+                }
+                // Skip the next argument since we processed it
+                i++;
+            }
+        }
+    }
+
+    // Initialize logger with verbosity settings
+    if (geteuid() != 0) {
+        const char *home = getenv("HOME");
+        if (home == NULL) {
+            fprintf(stderr, "Cannot determine home directory\n");
+            return 1;
+        }
+        char log_file_path[PATH_MAX];
+        snprintf(log_file_path, sizeof(log_file_path), "%s/pproc.log", home);
+        init_logger(log_file_path, verbosity, LL_DEBUG);
+    } else {
+        init_logger("/var/log/pproc.log", verbosity, LL_DEBUG);
+    }
+
     // At program startup (after logger init)
     log_message(LL_INFO, "Penguin Protector v1.0 starting up");
     log_message(LL_DEBUG, "Command line arguments: argc=%d", argc);
