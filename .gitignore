@@ -56,3 +56,4 @@ dkms.conf
 
 #ignore compiled binaries
 *.exe
+notes.txt
