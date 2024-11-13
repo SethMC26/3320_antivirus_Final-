@@ -2,21 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-
-#include "Crypto/fingerprint.h"
-
-#include "scanner.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
 #include <pthread.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <linux/limits.h>
 
 #include "Crypto/fingerprint.h"
 #include "scanner.h"
-#include <linux/limits.h>
 
 // Thread data structure to hold the file or directory path
 typedef struct
@@ -30,32 +22,55 @@ typedef struct
 // Mutex for synchronization
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+// Path to the whitelist file
+#define WHITELIST_PATH "/usr/local/share/pproc/whitelist.txt"
+
 // private method not included in header so we declare it here
 
 /**
- * Scans over a list of hashes stored in file to see if any match target hash
- * @param target_hash String of hash to check for
- * @param target_file String of file of target_hash needed incase file is malicious
- * @param hash_file String of file with hash list
- * @param hash_buffer_size Size of buffer needed for hash
- *
- * @returns 0 if scan did not find a matching hash, 1 if scan did find a matching has, -1 for an error
+ * Checks if a file or directory is in the whitelist
+ * @param target_path String of the path to check
+ * @return 1 if whitelisted, 0 if not
  */
-int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size);
+int is_whitelisted(const char *target_path)
+{
+    FILE *whitelist_file = fopen(WHITELIST_PATH, "r");
+    if (whitelist_file == NULL)
+    {
+        return 0; // If the file doesn't exist, return false
+    }
+
+    char line[PATH_MAX];
+    while (fgets(line, sizeof(line), whitelist_file))
+    {
+        // Remove the newline character from each line
+        line[strcspn(line, "\n")] = 0;
+
+        // Check if the path matches the whitelist entry
+        if (strcmp(line, target_path) == 0)
+        {
+            fclose(whitelist_file);
+            return 1; // File is whitelisted
+        }
+    }
+
+    fclose(whitelist_file);
+    return 0; // File is not whitelisted
+}
 
 /**
- * Gets yes or no user input
- *
- * @param prompt String with prompt for user
- *
- * @returns 1 if yes 0 if no
+ * Scans a file to see if its hash matches any in the hash list
+ * @param target_file String of target file to scan
+ * @return int 1 if true, 0 if false, 1 if error 
  */
-int get_user_input(char *prompt);
-
 int scan_file(char *target_file)
 {
-    // TO:DO add logic for scanning a file
-    // may want to change how return works as needed
+    // If file is whitelisted, skip scanning
+    if (is_whitelisted(target_file))
+    {
+        printf("Skipping whitelisted file: %s\n", target_file);
+        return 0;
+    }
 
     // Hold different hashes for this file
     char target_sha1_hash[SHA1_BUFFER_SIZE];
@@ -293,8 +308,6 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
     // go line by line through malicious hashes and see if the file hash matches
     while (fgets(current_hash, hash_buffer_size, hashes))
     {
-        // printf("%s\n", current_hash);
-        // if file malicious file is detected ask user if we should remove it
         if (strcmp(current_hash, target_hash) == 0)
         {
             // quarantine file by removing execute permissions
