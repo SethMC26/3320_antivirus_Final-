@@ -61,7 +61,7 @@ void print_usage(const char *program_name) {
 
 int main(int argc, char* argv[]) {
     // Initialize logger with default settings
-    init_logger("/var/log/pproc.log", LL_INFO, LL_DEBUG);
+    init_logger("/var/log/pproc.log", LL_DEBUG, LL_DEBUG); // show all logs
     
     // Test logging system
     log_message(LL_INFO, "Penguin Protector started");

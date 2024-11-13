@@ -123,9 +123,9 @@ int scan_file(char *target_file)
 
     log_message(LL_DEBUG, "MD5 scan complete for %s", target_file);
 
-    printf("DEBUG: sha-1 hash: %s \n", target_sha1_hash);
-    printf("DEBUG: sha-256 hash: %s \n", target_sha256_hash);
-    printf("DEBUG: md5 hash: %s \n", target_md5_hash);
+    log_message(LL_DEBUG, "sha-1 hash: %s", target_sha1_hash);
+    log_message(LL_DEBUG, "sha-256 hash: %s", target_sha256_hash);
+    log_message(LL_DEBUG, "md5 hash: %s", target_md5_hash);
 
     return 0;
 }
@@ -136,7 +136,7 @@ void *scan_file_thread(void *arg)
 
     if (!data->is_directory)
     {
-        printf("Scanning file: %s\n", data->path);
+        log_message(LL_DEBUG, "Scanning file: %s", data->path);
         scan_file(data->path); // Call your existing scan_file function
     }
 
@@ -189,7 +189,7 @@ int scan_dir(char *target_dir)
         if (S_ISDIR(statbuf.st_mode))
         {
             // If it's a directory, recursively scan it (also threaded)
-            printf("Directory found: %s\n", path); // Print the path of the subdirectory being scanned
+            log_message(LL_DEBUG, "Directory found: %s", path); // Print the path of the subdirectory being scanned
 
             thread_data_t *data = malloc(sizeof(thread_data_t));
             data->path = strdup(path);
@@ -215,7 +215,7 @@ int scan_dir(char *target_dir)
         else
         {
             // If it's a file, scan it
-            printf("File found: %s\n", path); // Print the path of the file being scanned
+            log_message(LL_DEBUG, "File found: %s", path); // Print the path of the file being scanned
 
             thread_data_t *data = malloc(sizeof(thread_data_t));
             data->path = strdup(path);
@@ -256,15 +256,15 @@ int scan_dir(char *target_dir)
  */
 int scan_system()
 {
-    printf("Starting system scan...\n");
+    log_message(LL_INFO, "Starting system scan...");
     int result = scan_dir("/"); // Scan from root directory
     if (result == 0)
     {
-        printf("System scan completed successfully.\n");
+        log_message(LL_INFO, "System scan completed successfully.");
     }
     else
     {
-        printf("System scan failed.\n");
+        log_message(LL_ERROR, "System scan failed.");
     }
     return result; // Return the result from scan_dir
 }
@@ -302,11 +302,11 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
             // set file to readonly mode
             if (chmod(target_file, S_IRUSR | S_IRGRP | S_IROTH) == -1)
             {
-                perror("Failed to change file permissions");
+                log_message(LL_ERROR, "Failed to change file permissions");
                 return 1;
             }
 
-            printf("\n\nPossible malicious file detected: %s \n", target_file);
+            log_message(LL_WARNING, "Possible malicious file detected: %s", target_file);
 
             switch (get_user_input("Would you like to remove the file Y/N:"))
             {
@@ -314,11 +314,11 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
                 // restore file permissions
                 chmod(target_file, file_permissions);
                 // add to white list
-                printf("Add file to white list feature not implemented\n");
+                log_message(LL_INFO, "Add file to white list feature not implemented");
                 break;
             case 1:
                 // remove file
-                printf("Removing file %s \n", target_file);
+                log_message(LL_INFO, "Removing file %s", target_file);
                 remove(target_file);
                 break;
             }
@@ -340,7 +340,7 @@ int get_user_input(char *prompt)
     // iterate until we get a good value
     while (1)
     {
-        printf("%s", prompt);
+        log_message(LL_INFO, "%s", prompt);
         scanf("%c", &input);
         if (input == 'y' || input == 'Y')
         {
@@ -352,7 +352,7 @@ int get_user_input(char *prompt)
         }
         else
         {
-            printf("\nInvalid input must be Y or N \n");
+            log_message(LL_ERROR, "Invalid input must be Y or N");
         }
     }
 }
