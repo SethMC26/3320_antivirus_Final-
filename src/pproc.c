@@ -101,8 +101,10 @@ int main(int argc, char* argv[]) {
         char log_file_path[PATH_MAX];
         snprintf(log_file_path, sizeof(log_file_path), "%s/pproc.log", home);
         init_logger(log_file_path, verbosity, LL_DEBUG);
+        log_message(LL_DEBUG, "Logger initialized for non-root user at %s", log_file_path);
     } else {
         init_logger("/var/log/pproc.log", verbosity, LL_DEBUG);
+        log_message(LL_DEBUG, "Logger initialized for root user at /var/log/pproc.log");
     }
 
     // At program startup (after logger init)
@@ -133,12 +135,14 @@ int main(int argc, char* argv[]) {
 
     //catch case of not enough args to avoid undefined behavoir
     if (argc < 2) {
+        log_message(LL_ERROR, "Insufficient arguments provided");
         printAsciiArt();
         print_usage(argv[0]);
         return 0;
     }
     //print help 
     if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+        log_message(LL_INFO, "Help requested");
         print_usage(argv[0]);
         return 0;
     }
@@ -155,6 +159,7 @@ int main(int argc, char* argv[]) {
         }
         //scan all
         if ((strcmp(argv[2], "-a") == 0) || (strcmp(argv[2], "--all") == 0)) {
+            log_message(LL_INFO, "Scanning entire system");
             scan_all = 1;
         }
         //scan directory
@@ -165,6 +170,7 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
             target_directory = argv[3];
+            log_message(LL_INFO, "Scanning directory: %s", target_directory);
         }
         else if (argv[2][0] == '-') {
             log_message(LL_ERROR, "Error: No argument %s exists", argv[2]);
@@ -180,6 +186,7 @@ int main(int argc, char* argv[]) {
                 return 1;
             } 
             target_file = argv[2];
+            log_message(LL_INFO, "Scanning file: %s", target_file);
         }
     }
     //add file to white list 
@@ -190,6 +197,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         file_to_add = argv[2];
+        log_message(LL_INFO, "Adding file to whitelist: %s", file_to_add);
     }
     else {
         log_message(LL_ERROR, "Error: Unrecognized option '%s'.", argv[1]);
@@ -199,14 +207,17 @@ int main(int argc, char* argv[]) {
 
     //do target file scan
     if ( target_file != NULL) {
+        log_message(LL_DEBUG, "Initiating file scan for %s", target_file);
         scan_file(target_file);
     }
     //do target directory scan
     else if (target_directory != NULL) {
+        log_message(LL_DEBUG, "Initiating directory scan for %s", target_directory);
         scan_dir(target_directory);
     }
     //scan entire file system
     else if ( scan_all ) {
+        log_message(LL_DEBUG, "Initiating system-wide scan");
         scan_system();
         //may want to use scanning a directory logic but set directory to "/";
     }

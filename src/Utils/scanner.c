@@ -134,14 +134,19 @@ void *scan_file_thread(void *arg)
 {
     thread_data_t *data = (thread_data_t *)arg;
 
+    log_message(LL_DEBUG, "Thread started for path: %s", data->path);
+
     if (!data->is_directory)
     {
-        log_message(LL_DEBUG, "Scanning file: %s", data->path);
+        log_message(LL_INFO, "Scanning file: %s", data->path);
         scan_file(data->path); // Call your existing scan_file function
     }
 
+    log_message(LL_DEBUG, "Freeing resources for path: %s", data->path);
     free(data->path); // Free the allocated memory for the path
     free(data);       // Free the thread data structure
+
+    log_message(LL_DEBUG, "Exiting thread for path: %s", data->path);
     pthread_exit(NULL);
 }
 
@@ -152,6 +157,8 @@ void *scan_file_thread(void *arg)
  */
 int scan_dir(char *target_dir)
 {
+    log_message(LL_INFO, "Starting directory scan: %s", target_dir);
+
     DIR *dir = opendir(target_dir);
     if (dir == NULL)
     {
@@ -162,7 +169,7 @@ int scan_dir(char *target_dir)
     struct dirent *entry;
     pthread_t threads[MAX_THREADS]; // Array of threads
     int thread_count = 0;
-    
+
     log_message(LL_INFO, "Scanning directory: %s", target_dir);
 
     // Iterate over each entry in the directory
@@ -189,15 +196,21 @@ int scan_dir(char *target_dir)
         if (S_ISDIR(statbuf.st_mode))
         {
             // If it's a directory, recursively scan it (also threaded)
-            log_message(LL_DEBUG, "Directory found: %s", path); // Print the path of the subdirectory being scanned
+            log_message(LL_DEBUG, "Directory found: %s", path); // Log the path of the subdirectory being scanned
 
             thread_data_t *data = malloc(sizeof(thread_data_t));
+            if (data == NULL)
+            {
+                log_message(LL_ERROR, "Memory allocation failed for path: %s", path);
+                continue;
+            }
             data->path = strdup(path);
             data->is_directory = 1;
 
             // Check if we have space to create a new thread
             if (thread_count < MAX_THREADS)
             {
+                log_message(LL_DEBUG, "Creating thread for directory: %s", path);
                 pthread_create(&threads[thread_count], NULL, scan_file_thread, (void *)data);
                 thread_count++;
             }
@@ -246,6 +259,7 @@ int scan_dir(char *target_dir)
         pthread_join(threads[i], NULL);
     }
 
+    log_message(LL_INFO, "Finished scanning directory: %s", target_dir);
     closedir(dir);
     return 0; // Return 0 for success
 }
