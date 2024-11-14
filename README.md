@@ -97,3 +97,61 @@ Options:
 # Sources 
 - The malicious hash files list has been sourced [here](https://github.com/romainmarcoux/malicious-hash)
 - Logo for the project [here](https://commons.wikimedia.org/wiki/File:Pax_tux.png) with license [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+
+
+## pproc-service: Automatic File Scanning Service
+
+### Overview
+The `pproc-service` is a background service that automatically scans new files in the `/downloads` directory for malware. It uses `inotify` to monitor the directory, and when a new file is added, it triggers the scan and logs the result. The service is managed via `systemd` and starts automatically on boot.
+
+### Features:
+- **Real-time File Scanning**: Automatically scans files as soon as they are added to the Downloads directory.
+- **Logging**: Logs the status of each file scan, including any detected malicious files, to `/var/log/pproc-service.log`.
+- **Systemd Integration**: The service runs in the background and can be easily controlled using `systemctl`.
+
+### Installation and Setup:
+
+
+
+1. **Start the Service**:
+   The service will start automatically. If you need to start it manually, you can use:
+   ```bash
+   sudo systemctl start pproc-service
+   ```
+
+2. **Enable the Service to Start on Boot**:
+   To enable the service to start automatically on system boot, run:
+   ```bash
+   sudo systemctl enable pproc-service
+   ```
+
+3. **Check the Service Status**:
+   To check if the service is running, use:
+   ```bash
+   sudo systemctl status pproc-service
+   ```
+
+4. **View Logs**:
+   You can view the service logs using `journalctl`:
+   ```bash
+   sudo journalctl -u pproc-service
+   ```
+
+### Configuration:
+- The service monitors the `/downloads` directory for new files. You can modify the directory being watched by editing the `WATCH_DIR` variable in the source code if needed.
+- The service writes logs to `/var/log/pproc-service.log`. You can adjust the logging level and the log file path by modifying the source code.
+
+### Stopping the Service:
+To stop the service at any time, use:
+```bash
+sudo systemctl stop pproc-service
+```
+
+### Remove the Service:
+To remove the service, use the following commands:
+```bash
+sudo systemctl stop pproc-service
+sudo systemctl disable pproc-service
+sudo rm /etc/systemd/system/pproc-service.service
+sudo systemctl daemon-reload
+```
