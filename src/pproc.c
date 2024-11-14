@@ -172,6 +172,10 @@ int main(int argc, char* argv[]) {
             target_directory = argv[3];
             log_message(LL_INFO, "Scanning directory: %s", target_directory);
         }
+        else if ((strcmp(argv[2], "-v") == 0 ) || strcmp(argv[2], "--verbose") == 0 ) {
+            //ignore we already handled this 
+            ;
+        }
         else if (argv[2][0] == '-') {
             log_message(LL_ERROR, "Error: No argument %s exists", argv[2]);
             print_usage(argv[0]);
