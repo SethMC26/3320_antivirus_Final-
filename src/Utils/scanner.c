@@ -319,9 +319,9 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
                 return 1;
             }
 
-            log_message(LL_WARNING, "Possible malicious file detected: %s", target_file);
+            printf("\nPossible malicious file detected: %s", target_file);
 
-            switch (get_user_input("Would you like to remove the file Y/N:"))
+            switch (get_user_input("\nWould you like to remove the file Y/N:"))
             {
             case 0:
                 // restore file permissions
@@ -353,7 +353,7 @@ int get_user_input(char *prompt)
     // iterate until we get a good value
     while (1)
     {
-        log_message(LL_INFO, "%s", prompt);
+        printf("%s", prompt);
         scanf("%c", &input);
         if (input == 'y' || input == 'Y')
         {
@@ -365,7 +365,7 @@ int get_user_input(char *prompt)
         }
         else
         {
-            log_message(LL_ERROR, "Invalid input must be Y or N");
+            printf("\nInvalid input must be Y or N");
         }
     }
 }
