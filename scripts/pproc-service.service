@@ -1,0 +1,13 @@
+[Unit]
+Description=pproc service to scan new downloaded files
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/pproc-service
+Restart=always
+User=root
+Group=root
+Environment=PPROC_LOG_FILE=/var/log/pproc-service.log
+
+[Install]
+WantedBy=multi-user.target
