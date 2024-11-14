@@ -10,6 +10,7 @@
 #include "Crypto/fingerprint.h"
 #include "Utils/logger.h"
 #include "scanner.h"
+#include <linux/limits.h>
 
 // Thread data structure to hold the file or directory path
 typedef struct
