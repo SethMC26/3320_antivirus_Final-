@@ -146,7 +146,6 @@ void *scan_file_thread(void *arg)
     free(data->path); // Free the allocated memory for the path
     free(data);       // Free the thread data structure
 
-    log_message(LL_DEBUG, "Exiting thread for path: %s", data->path);
     pthread_exit(NULL);
 }
 
