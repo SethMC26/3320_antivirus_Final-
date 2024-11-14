@@ -5,6 +5,7 @@
 #include <openssl/evp.h>
 
 #include "fingerprint.h"
+#include "../Utils/logger.h"
 
 #define FILE_BUFF_SIZE 4096
 //private method not included in header so we declare it here 
@@ -46,7 +47,7 @@ int compute_hash(char* target_file, char* hash_buffer, const EVP_MD* hashing_alg
     //catch errors while creating context 
     if (!mdctx){ 
         fclose(file);
-        fprintf(stderr, "Error in Fingerprint: Cannot create context\n");
+        log_message(LL_ERROR, "Error in Fingerprint: Cannot create context");
         return 1;
     }
 
@@ -54,7 +55,7 @@ int compute_hash(char* target_file, char* hash_buffer, const EVP_MD* hashing_alg
     if (EVP_DigestInit_ex(mdctx, hashing_algorithm, NULL) != 1 ) {
         EVP_MD_CTX_free(mdctx);
         fclose(file);
-        fprintf(stderr, "Error in Fingerprint: Cannot initialize context\n");
+        log_message(LL_ERROR, "Error in Fingerprint: Cannot initialize context");
         return 1;
     }
 
@@ -67,7 +68,7 @@ int compute_hash(char* target_file, char* hash_buffer, const EVP_MD* hashing_alg
         if (EVP_DigestUpdate(mdctx, buffer, bytes_read) != 1) {
             EVP_MD_CTX_free(mdctx);
             fclose(file);
-            fprintf(stderr, "Error in fingerprint: Cannot updating digest\n");
+            log_message(LL_ERROR, "Error in fingerprint: Cannot updating digest");
             return 1;
         }
     }
@@ -79,7 +80,7 @@ int compute_hash(char* target_file, char* hash_buffer, const EVP_MD* hashing_alg
     if (EVP_DigestFinal_ex(mdctx, hash, NULL) != 1) {
         EVP_MD_CTX_free(mdctx);
         fclose(file);
-        fprintf(stderr, "Error finalizing digest\n");
+        log_message(LL_ERROR, "Error finalizing digest");
         return 1;
     }
 
