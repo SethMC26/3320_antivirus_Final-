@@ -17,7 +17,7 @@
 #define LOG_FILE "/var/log/pproc-service.log"
 
 // Function to log messages
-void log_message(const char *message) {
+void log_message_service(const char *message) {
     FILE *log_file = fopen(LOG_FILE, "a");
     if (log_file) {
         time_t now = time(NULL);
@@ -34,14 +34,14 @@ void handle_new_file(const char *file_path) {
     // Log the file path before starting the scan
     char log_msg[1024];
     snprintf(log_msg, sizeof(log_msg), "Starting scan for new file: %s", file_path);
-    log_message(log_msg);
+    log_message_service(log_msg);
 
     // Cast file_path to a non-const char* as expected by scan_file function
     scan_file((char*)file_path);
 
     // Log the file path after the scan is complete
     snprintf(log_msg, sizeof(log_msg), "Scan complete for file: %s", file_path);
-    log_message(log_msg);
+    log_message_service(log_msg);
 }
 
 // Main function that monitors the directory and scans new files
@@ -75,7 +75,7 @@ void start_pproc_service() {
                 // Log the event of a new file being detected
                 char log_msg[1024];
                 snprintf(log_msg, sizeof(log_msg), "New file detected: %s", file_path);
-                log_message(log_msg);
+                log_message_service(log_msg);
 
                 handle_new_file(file_path);
             }
@@ -88,7 +88,7 @@ void start_pproc_service() {
 #ifdef SERVICE_MAIN
 // Main function for the service (to be compiled only for the service program)
 int main() {
-    log_message("Starting pproc-service...");
+    log_message_service("Starting pproc-service...");
     start_pproc_service();  // Call the service function to start monitoring the directory
     return 0;  // We return 0 to indicate the program ran successfully
 }
