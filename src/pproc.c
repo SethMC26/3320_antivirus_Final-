@@ -4,6 +4,9 @@
 
 #include "Utils/scanner.h"
 
+// Forward declaration of the function if not included via a header
+void add_to_whitelist(const char* file_path);
+
 //might remove ascii art later but it is kinda fun 
 void printAsciiArt() {
     const char* asciiArt[] = {
@@ -146,8 +149,8 @@ int main(int argc, char* argv[]) {
     }
     //add file 
     else if ( file_to_add != NULL) {
-        printf("adding file %s\n", file_to_add);
-        printf("Adding files not implemented\n");
+        printf("Adding file %s to whitelist\n", file_to_add);
+        add_to_whitelist(file_to_add);
     }
     else {
         fprintf(stderr, "Error: No valid arguments provided.\n");

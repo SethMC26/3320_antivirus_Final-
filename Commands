@@ -1,2 +1,9 @@
 sudo apt-get upgrade libc6-dev
 sudo apt install libfl-dev
+
+
+Add whitelist functionality to skip trusted files during scan
+- Implemented a whitelist feature to skip scanning files and directories listed in `/usr/local/share/pproc/whitelist.txt`.
+- Updated `scan_file` function to check against the whitelist before scanning each file.
+- Created `is_whitelisted` function to verify if a file or directory is whitelisted.
+- Adjusted `install.sh` to create the whitelist file during installation.

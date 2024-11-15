@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <linux/limits.h>
+#include <errno.h>
 
 #include "Crypto/fingerprint.h"
 #include "Utils/logger.h"
@@ -23,6 +24,9 @@ typedef struct
 
 // Mutex for synchronization
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// Path to the whitelist file
+#define WHITELIST_PATH "/usr/local/share/pproc/whitelist.txt"
 
 // private method not included in header so we declare it here
 
@@ -46,11 +50,48 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
  */
 int get_user_input(char *prompt);
 
+int is_whitelisted(const char* target_path) {
+    FILE* whitelist_file = fopen(WHITELIST_PATH, "r");
+    if (whitelist_file == NULL) {
+        log_message(LL_DEBUG, "Whitelist file not found, assuming file is not whitelisted");
+        return 0;
+    }
+
+    char line[PATH_MAX];
+    while (fgets(line, sizeof(line), whitelist_file)) {
+        // Remove newline character
+        line[strcspn(line, "\n")] = 0;
+        
+        if (strcmp(line, target_path) == 0) {
+            fclose(whitelist_file);
+            return 1;
+        }
+    }
+
+    fclose(whitelist_file);
+    return 0;
+}
+
+void add_to_whitelist(const char* file_path) {
+    FILE *whitelist_file = fopen("/usr/local/share/pproc/whitelist.txt", "a");
+    if (whitelist_file == NULL) {
+        fprintf(stderr, "[ERROR] Could not open whitelist file for writing: %s\n", strerror(errno));
+        return;
+    }
+
+    fprintf(whitelist_file, "%s\n", file_path);
+    fclose(whitelist_file);
+    log_message(LL_INFO, "Added %s to whitelist", file_path);
+}
+
 int scan_file(char *target_file)
 {
-    // TO:DO add logic for scanning a file
-    // may want to change how return works as needed
-
+    // Check whitelist before scanning
+    if (is_whitelisted(target_file)) {
+        log_message(LL_INFO, "Skipping whitelisted file: %s", target_file);
+        return 0;
+    }
+    
     // Hold different hashes for this file
     char target_sha1_hash[SHA1_BUFFER_SIZE];
     char target_sha256_hash[SHA256_BUFFER_SIZE];
@@ -327,8 +368,13 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
             case 0:
                 // restore file permissions
                 chmod(target_file, file_permissions);
-                // add to white list
-                log_message(LL_INFO, "Add file to white list feature not implemented");
+                // Add whitelist option
+                if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
+                    add_to_whitelist(target_file);
+                    log_message(LL_INFO, "File added to whitelist successfully");
+                } else {
+                    log_message(LL_INFO, "File not added to whitelist");
+                }
                 break;
             case 1:
                 // remove file
