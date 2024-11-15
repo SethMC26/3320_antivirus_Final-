@@ -85,7 +85,7 @@ fi
 # Create the whitelist file with proper permissions
 sudo touch /usr/local/share/pproc/whitelist.txt
 sudo chmod 666 /usr/local/share/pproc/whitelist.txt
-sudo chown "$SUDO_USER:$SUDO_USER" /usr/local/share/pproc/whitelist.txt
+sudo chown root:root /usr/local/share/pproc/whitelist.txt
 echo "Whitelist file created at /usr/local/share/pproc/whitelist.txt"
 
 echo "Program and hash data successfully installed"

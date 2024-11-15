@@ -28,6 +28,10 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 // Path to the whitelist file
 #define WHITELIST_PATH "/usr/local/share/pproc/whitelist.txt"
 
+// Add at the top with other global variables
+pthread_mutex_t thread_count_mutex = PTHREAD_MUTEX_INITIALIZER;
+int active_threads = 0;
+
 // private method not included in header so we declare it here
 
 /**
@@ -214,21 +218,17 @@ int scan_dir(char *target_dir)
     }
 
     struct dirent *entry;
-    pthread_t threads[MAX_THREADS]; // Array of threads
-    int thread_count = 0;
+    pthread_t threads[MAX_THREADS];
+    int thread_indices[MAX_THREADS] = {0};
+    int local_active_threads = 0;
 
-    log_message(LL_INFO, "Scanning directory: %s", target_dir);
-
-    // Iterate over each entry in the directory
     while ((entry = readdir(dir)) != NULL)
     {
-        // Skip "." and ".."
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         {
             continue;
         }
 
-        // Construct the full path of the entry
         char path[PATH_MAX];
         snprintf(path, sizeof(path), "%s/%s", target_dir, entry->d_name);
 
@@ -239,76 +239,61 @@ int scan_dir(char *target_dir)
             continue;
         }
 
-        // Check if it's a directory or a file
-        if (S_ISDIR(statbuf.st_mode))
+        thread_data_t *data = malloc(sizeof(thread_data_t));
+        if (data == NULL)
         {
-            // If it's a directory, recursively scan it (also threaded)
-            log_message(LL_DEBUG, "Directory found: %s", path); // Log the path of the subdirectory being scanned
+            log_message(LL_ERROR, "Memory allocation failed for path: %s", path);
+            continue;
+        }
+        data->path = strdup(path);
+        data->is_directory = S_ISDIR(statbuf.st_mode);
 
-            thread_data_t *data = malloc(sizeof(thread_data_t));
-            if (data == NULL)
+        // If we've reached max threads, wait for some to complete
+        if (local_active_threads >= MAX_THREADS)
+        {
+            // Wait for all current threads to finish
+            for (int i = 0; i < MAX_THREADS; i++)
             {
-                log_message(LL_ERROR, "Memory allocation failed for path: %s", path);
-                continue;
-            }
-            data->path = strdup(path);
-            data->is_directory = 1;
-
-            // Check if we have space to create a new thread
-            if (thread_count < MAX_THREADS)
-            {
-                log_message(LL_DEBUG, "Creating thread for directory: %s", path);
-                pthread_create(&threads[thread_count], NULL, scan_file_thread, (void *)data);
-                thread_count++;
-            }
-            else
-            {
-                // If max threads reached, wait for some to finish
-                for (int i = 0; i < MAX_THREADS; i++)
+                if (thread_indices[i])
                 {
                     pthread_join(threads[i], NULL);
+                    thread_indices[i] = 0;
                 }
-                // Reset thread counter
-                thread_count = 0;
+            }
+            local_active_threads = 0;
+        }
+
+        // Create new thread
+        int slot = -1;
+        for (int i = 0; i < MAX_THREADS; i++)
+        {
+            if (thread_indices[i] == 0)
+            {
+                slot = i;
+                thread_indices[i] = 1;
+                break;
             }
         }
-        else
+
+        if (slot != -1)
         {
-            // If it's a file, scan it
-            log_message(LL_DEBUG, "File found: %s", path); // Print the path of the file being scanned
-
-            thread_data_t *data = malloc(sizeof(thread_data_t));
-            data->path = strdup(path);
-            data->is_directory = 0;
-
-            // Check if we have space to create a new thread
-            if (thread_count < MAX_THREADS)
-            {
-                pthread_create(&threads[thread_count], NULL, scan_file_thread, (void *)data);
-                thread_count++;
-            }
-            else
-            {
-                // If max threads reached, wait for some to finish
-                for (int i = 0; i < MAX_THREADS; i++)
-                {
-                    pthread_join(threads[i], NULL);
-                }
-                // Reset thread counter
-                thread_count = 0;
-            }
+            pthread_create(&threads[slot], NULL, scan_file_thread, (void *)data);
+            local_active_threads++;
         }
     }
 
-    // Wait for all threads to finish
-    for (int i = 0; i < thread_count; i++)
+    // Wait for remaining threads to complete
+    for (int i = 0; i < MAX_THREADS; i++)
     {
-        pthread_join(threads[i], NULL);
+        if (thread_indices[i])
+        {
+            pthread_join(threads[i], NULL);
+        }
     }
 
     log_message(LL_INFO, "Finished scanning directory: %s", target_dir);
     closedir(dir);
-    return 0; // Return 0 for success
+    return 0;
 }
 
 /**
