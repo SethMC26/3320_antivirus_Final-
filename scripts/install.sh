@@ -106,7 +106,9 @@ fi
 
 # Create quarantine directory with proper permissions
 sudo mkdir -p /usr/local/share/pproc/quarantine
-sudo chmod 700 /usr/local/share/pproc/quarantine
+sudo chown -R "$SUDO_USER:$SUDO_USER" /usr/local/share/pproc/quarantine
+sudo chmod -R 755 /usr/local/share/pproc
+sudo chmod 777 /usr/local/share/pproc/quarantine
 
 echo "Installation complete"
 

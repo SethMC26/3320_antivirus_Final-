@@ -326,69 +326,130 @@ int scan_system()
 
 int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size)
 {
-    // current hash in hash list
     char *current_hash = malloc(hash_buffer_size);
-
-    // open list of malicious hashes
     FILE *hashes = fopen(hash_file, "r");
 
     if (hashes == NULL) {
         log_message(LL_ERROR, "Could not find hash file %s", hash_file);
+        free(current_hash);
         return -1;
     }
 
-    // go line by line through malicious hashes and see if the file hash matches
     while (fgets(current_hash, hash_buffer_size, hashes)) {
-        // if file malicious file is detected ask user if we should remove it
         if (strcmp(current_hash, target_hash) == 0) {
             log_message(LL_WARNING, "Malicious file detected: %s", target_file);
             
-            // save original file permissions in case we should restore
             struct stat file_stat;
+            unsigned int file_permissions;
+
             if (stat(target_file, &file_stat) == -1) {
                 log_message(LL_ERROR, "Could not stat file %s", target_file);
+                free(current_hash);
+                fclose(hashes);
                 return -1;
             }
 
-            // set file to readonly mode
+            file_permissions = file_stat.st_mode;
+
             if (chmod(target_file, S_IRUSR | S_IRGRP | S_IROTH) == -1) {
                 log_message(LL_ERROR, "Failed to change file permissions");
+                free(current_hash);
+                fclose(hashes);
                 return 1;
             }
 
             printf("\nPossible malicious file detected: %s", target_file);
 
-            switch (get_user_input("\nWould you like to quarantine the file Y/N:")) {
-            case 0:
-                // restore file permissions
-                chmod(target_file, file_stat.st_mode);
-                // Add whitelist option
-                if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
-                    add_to_whitelist(target_file);
-                    log_message(LL_INFO, "File added to whitelist successfully");
-                } else {
-                    log_message(LL_INFO, "File not added to whitelist");
-                }
-                break;
+            switch (get_user_input("\nWould you like to remove the file Y/N:")) {
             case 1:
-                // move file to quarantine
-                char quarantine_command[512];
-                snprintf(quarantine_command, sizeof(quarantine_command), "mv %s /usr/local/share/pproc/quarantine/", target_file);
-                if (system(quarantine_command) == 0) {
-                    log_message(LL_INFO, "Moved file to quarantine: %s", target_file);
+                log_message(LL_INFO, "Removing file %s", target_file);
+                remove(target_file);
+                break;
+            case 0:
+                if (get_user_input("\nWould you like to quarantine the file Y/N:") == 1) {
+                    // Ensure quarantine directory exists with proper permissions
+                    struct stat st = {0};
+                    if (stat("/usr/local/share/pproc/quarantine", &st) == -1) {
+                        if (mkdir("/usr/local/share/pproc/quarantine", 0777) == -1) {
+                            log_message(LL_ERROR, "Failed to create quarantine directory: %s", strerror(errno));
+                            chmod(target_file, file_permissions);
+                            break;
+                        }
+                        chmod("/usr/local/share/pproc/quarantine", 0777);
+                    }
+
+                    const char *filename = strrchr(target_file, '/');
+                    filename = filename ? filename + 1 : target_file;
+                    
+                    char quarantine_path[PATH_MAX];
+                    snprintf(quarantine_path, sizeof(quarantine_path), 
+                            "/usr/local/share/pproc/quarantine/%s", filename);
+
+                    // Open source file
+                    FILE *src = fopen(target_file, "rb");
+                    if (!src) {
+                        log_message(LL_ERROR, "Failed to open source file for quarantine: %s", strerror(errno));
+                        chmod(target_file, file_permissions);
+                        break;
+                    }
+
+                    // Open destination file with explicit permissions
+                    FILE *dst = fopen(quarantine_path, "wb");
+                    if (!dst) {
+                        log_message(LL_ERROR, "Failed to open quarantine destination: %s", strerror(errno));
+                        fclose(src);
+                        chmod(target_file, file_permissions);
+                        break;
+                    }
+
+                    // Set permissions on the quarantine file
+                    chmod(quarantine_path, 0666);
+
+                    // Copy file contents
+                    char buf[8192];
+                    size_t size;
+                    int copy_success = 1;
+                    
+                    while ((size = fread(buf, 1, sizeof(buf), src)) > 0) {
+                        if (fwrite(buf, 1, size, dst) != size) {
+                            copy_success = 0;
+                            break;
+                        }
+                    }
+
+                    fclose(src);
+                    fclose(dst);
+
+                    if (copy_success) {
+                        if (remove(target_file) == 0) {
+                            log_message(LL_INFO, "File quarantined successfully: %s", filename);
+                        } else {
+                            log_message(LL_ERROR, "Failed to remove original file after quarantine: %s", strerror(errno));
+                            chmod(target_file, file_permissions);
+                            remove(quarantine_path);
+                        }
+                    } else {
+                        log_message(LL_ERROR, "Failed to copy file to quarantine: %s", strerror(errno));
+                        chmod(target_file, file_permissions);
+                        remove(quarantine_path);
+                    }
                 } else {
-                    log_message(LL_ERROR, "Failed to move file to quarantine: %s", target_file);
+                    if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
+                        add_to_whitelist(target_file);
+                    }
+                    chmod(target_file, file_permissions);
                 }
                 break;
             }
+            
+            free(current_hash);
+            fclose(hashes);
             return 1;
         }
     }
 
-    // clean up by freeing resources
-    fclose(hashes);
     free(current_hash);
-
+    fclose(hashes);
     return 0;
 }
 
