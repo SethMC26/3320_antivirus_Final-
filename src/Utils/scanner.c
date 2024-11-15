@@ -178,8 +178,14 @@ void *scan_file_thread(void *arg)
 
     log_message(LL_DEBUG, "Thread started for path: %s", data->path);
 
-    if (!data->is_directory)
+    if (data->is_directory)
     {
+        // If it's a directory, recursively scan it
+        scan_dir(data->path);
+    }
+    else
+    {
+        // If it's a file, scan it
         log_message(LL_INFO, "Scanning file: %s", data->path);
         scan_file(data->path, 0);  // 0 for non-automated mode
     }
