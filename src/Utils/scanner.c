@@ -28,6 +28,11 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 // Path to the whitelist file
 #define WHITELIST_PATH "/usr/local/share/pproc/whitelist.txt"
 
+// Add at the top with other global variables
+pthread_mutex_t thread_count_mutex = PTHREAD_MUTEX_INITIALIZER;
+int active_threads = 0;
+pthread_mutex_t whitelist_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 // private method not included in header so we declare it here
 
 /**
@@ -39,7 +44,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
  *
  * @returns 0 if scan did not find a matching hash, 1 if scan did find a matching has, -1 for an error
  */
-int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size);
+int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size, int automated_mode);
 
 /**
  * Gets yes or no user input
@@ -51,9 +56,13 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
 int get_user_input(char *prompt);
 
 int is_whitelisted(const char* target_path) {
+    int result = 0;
+    pthread_mutex_lock(&whitelist_mutex);
+    
     FILE* whitelist_file = fopen(WHITELIST_PATH, "r");
     if (whitelist_file == NULL) {
         log_message(LL_DEBUG, "Whitelist file not found, assuming file is not whitelisted");
+        pthread_mutex_unlock(&whitelist_mutex);
         return 0;
     }
 
@@ -63,28 +72,53 @@ int is_whitelisted(const char* target_path) {
         line[strcspn(line, "\n")] = 0;
         
         if (strcmp(line, target_path) == 0) {
-            fclose(whitelist_file);
-            return 1;
+            result = 1;
+            break;
         }
     }
 
     fclose(whitelist_file);
-    return 0;
+    pthread_mutex_unlock(&whitelist_mutex);
+    return result;
 }
 
 void add_to_whitelist(const char* file_path) {
-    FILE *whitelist_file = fopen("/usr/local/share/pproc/whitelist.txt", "a");
-    if (whitelist_file == NULL) {
-        fprintf(stderr, "[ERROR] Could not open whitelist file for writing: %s\n", strerror(errno));
+    pthread_mutex_lock(&whitelist_mutex);
+    
+    char command[PATH_MAX * 2];
+    
+    // Create directory and set permissions
+    snprintf(command, sizeof(command), 
+        "sudo sh -c '"
+        "mkdir -p /usr/local/share/pproc && "
+        "touch /usr/local/share/pproc/whitelist.txt && "
+        "chmod 777 /usr/local/share/pproc && "
+        "chmod 666 /usr/local/share/pproc/whitelist.txt'"
+    );
+    
+    if (system(command) != 0) {
+        log_message(LL_ERROR, "Failed to setup whitelist directory and permissions");
+        pthread_mutex_unlock(&whitelist_mutex);
         return;
     }
 
-    fprintf(whitelist_file, "%s\n", file_path);
-    fclose(whitelist_file);
+    // Append to whitelist using echo and sudo
+    snprintf(command, sizeof(command), 
+        "echo '%s' | sudo tee -a /usr/local/share/pproc/whitelist.txt > /dev/null", 
+        file_path
+    );
+    
+    if (system(command) != 0) {
+        log_message(LL_ERROR, "Failed to add entry to whitelist");
+        pthread_mutex_unlock(&whitelist_mutex);
+        return;
+    }
+
     log_message(LL_INFO, "Added %s to whitelist", file_path);
+    pthread_mutex_unlock(&whitelist_mutex);
 }
 
-int scan_file(char *target_file)
+int scan_file(char *target_file, int automated_mode)
 {
     // Check whitelist before scanning
     if (is_whitelisted(target_file)) {
@@ -108,7 +142,7 @@ int scan_file(char *target_file)
         return 1;
     }
 
-    scan_result = scan_hashes(target_sha1_hash, target_file, "/usr/local/share/pproc/sha1-hashes.txt", SHA1_BUFFER_SIZE);
+    scan_result = scan_hashes(target_sha1_hash, target_file, "/usr/local/share/pproc/sha1-hashes.txt", SHA1_BUFFER_SIZE, automated_mode);
     if (scan_result == 1) {
         log_message(LL_WARNING, "Malicious file detected (SHA1) in %s", target_file);
         return 0;
@@ -128,7 +162,7 @@ int scan_file(char *target_file)
         return 1;
     }
 
-    scan_result = scan_hashes(target_sha256_hash, target_file, "/usr/local/share/pproc/sha256-hashes.txt", SHA256_BUFFER_SIZE);
+    scan_result = scan_hashes(target_sha256_hash, target_file, "/usr/local/share/pproc/sha256-hashes.txt", SHA256_BUFFER_SIZE, automated_mode);
     if (scan_result == 1)
     {
         log_message(LL_WARNING, "Malicious file detected (SHA256) in %s", target_file);
@@ -151,7 +185,7 @@ int scan_file(char *target_file)
         return 1;
     }
 
-    scan_result = scan_hashes(target_md5_hash, target_file, "/usr/local/share/pproc/md5-hashes.txt", MD5_BUFFER_SIZE);
+    scan_result = scan_hashes(target_md5_hash, target_file, "/usr/local/share/pproc/md5-hashes.txt", MD5_BUFFER_SIZE, automated_mode);
     if (scan_result == 1)
     {
         log_message(LL_WARNING, "Malicious file detected (MD5) in %s", target_file);
@@ -178,15 +212,21 @@ void *scan_file_thread(void *arg)
 
     log_message(LL_DEBUG, "Thread started for path: %s", data->path);
 
-    if (!data->is_directory)
+    if (data->is_directory)
     {
+        // If it's a directory, recursively scan it
+        scan_dir(data->path);
+    }
+    else
+    {
+        // If it's a file, scan it
         log_message(LL_INFO, "Scanning file: %s", data->path);
-        scan_file(data->path); // Call your existing scan_file function
+        scan_file(data->path, 0);  // 0 for non-automated mode
     }
 
     log_message(LL_DEBUG, "Freeing resources for path: %s", data->path);
-    free(data->path); // Free the allocated memory for the path
-    free(data);       // Free the thread data structure
+    free(data->path);
+    free(data);
 
     pthread_exit(NULL);
 }
@@ -208,21 +248,17 @@ int scan_dir(char *target_dir)
     }
 
     struct dirent *entry;
-    pthread_t threads[MAX_THREADS]; // Array of threads
-    int thread_count = 0;
+    pthread_t threads[MAX_THREADS];
+    int thread_indices[MAX_THREADS] = {0};
+    int local_active_threads = 0;
 
-    log_message(LL_INFO, "Scanning directory: %s", target_dir);
-
-    // Iterate over each entry in the directory
     while ((entry = readdir(dir)) != NULL)
     {
-        // Skip "." and ".."
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         {
             continue;
         }
 
-        // Construct the full path of the entry
         char path[PATH_MAX];
         snprintf(path, sizeof(path), "%s/%s", target_dir, entry->d_name);
 
@@ -233,76 +269,61 @@ int scan_dir(char *target_dir)
             continue;
         }
 
-        // Check if it's a directory or a file
-        if (S_ISDIR(statbuf.st_mode))
+        thread_data_t *data = malloc(sizeof(thread_data_t));
+        if (data == NULL)
         {
-            // If it's a directory, recursively scan it (also threaded)
-            log_message(LL_DEBUG, "Directory found: %s", path); // Log the path of the subdirectory being scanned
+            log_message(LL_ERROR, "Memory allocation failed for path: %s", path);
+            continue;
+        }
+        data->path = strdup(path);
+        data->is_directory = S_ISDIR(statbuf.st_mode);
 
-            thread_data_t *data = malloc(sizeof(thread_data_t));
-            if (data == NULL)
+        // If we've reached max threads, wait for some to complete
+        if (local_active_threads >= MAX_THREADS)
+        {
+            // Wait for all current threads to finish
+            for (int i = 0; i < MAX_THREADS; i++)
             {
-                log_message(LL_ERROR, "Memory allocation failed for path: %s", path);
-                continue;
-            }
-            data->path = strdup(path);
-            data->is_directory = 1;
-
-            // Check if we have space to create a new thread
-            if (thread_count < MAX_THREADS)
-            {
-                log_message(LL_DEBUG, "Creating thread for directory: %s", path);
-                pthread_create(&threads[thread_count], NULL, scan_file_thread, (void *)data);
-                thread_count++;
-            }
-            else
-            {
-                // If max threads reached, wait for some to finish
-                for (int i = 0; i < MAX_THREADS; i++)
+                if (thread_indices[i])
                 {
                     pthread_join(threads[i], NULL);
+                    thread_indices[i] = 0;
                 }
-                // Reset thread counter
-                thread_count = 0;
+            }
+            local_active_threads = 0;
+        }
+
+        // Create new thread
+        int slot = -1;
+        for (int i = 0; i < MAX_THREADS; i++)
+        {
+            if (thread_indices[i] == 0)
+            {
+                slot = i;
+                thread_indices[i] = 1;
+                break;
             }
         }
-        else
+
+        if (slot != -1)
         {
-            // If it's a file, scan it
-            log_message(LL_DEBUG, "File found: %s", path); // Print the path of the file being scanned
-
-            thread_data_t *data = malloc(sizeof(thread_data_t));
-            data->path = strdup(path);
-            data->is_directory = 0;
-
-            // Check if we have space to create a new thread
-            if (thread_count < MAX_THREADS)
-            {
-                pthread_create(&threads[thread_count], NULL, scan_file_thread, (void *)data);
-                thread_count++;
-            }
-            else
-            {
-                // If max threads reached, wait for some to finish
-                for (int i = 0; i < MAX_THREADS; i++)
-                {
-                    pthread_join(threads[i], NULL);
-                }
-                // Reset thread counter
-                thread_count = 0;
-            }
+            pthread_create(&threads[slot], NULL, scan_file_thread, (void *)data);
+            local_active_threads++;
         }
     }
 
-    // Wait for all threads to finish
-    for (int i = 0; i < thread_count; i++)
+    // Wait for remaining threads to complete
+    for (int i = 0; i < MAX_THREADS; i++)
     {
-        pthread_join(threads[i], NULL);
+        if (thread_indices[i])
+        {
+            pthread_join(threads[i], NULL);
+        }
     }
 
     log_message(LL_INFO, "Finished scanning directory: %s", target_dir);
     closedir(dir);
-    return 0; // Return 0 for success
+    return 0;
 }
 
 /**
@@ -324,72 +345,136 @@ int scan_system()
     return result; // Return the result from scan_dir
 }
 
-int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size)
+int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size, int automated_mode)
 {
-    // current hash in hash list
     char *current_hash = malloc(hash_buffer_size);
-
-    // open list of malicious hashes
     FILE *hashes = fopen(hash_file, "r");
 
     if (hashes == NULL) {
         log_message(LL_ERROR, "Could not find hash file %s", hash_file);
+        free(current_hash);
         return -1;
     }
 
-    // go line by line through malicious hashes and see if the file hash matches
     while (fgets(current_hash, hash_buffer_size, hashes)) {
-        // if file malicious file is detected ask user if we should remove it
         if (strcmp(current_hash, target_hash) == 0) {
             log_message(LL_WARNING, "Malicious file detected: %s", target_file);
             
-            // save original file permissions in case we should restore
             struct stat file_stat;
             unsigned int file_permissions;
 
             if (stat(target_file, &file_stat) == -1) {
                 log_message(LL_ERROR, "Could not stat file %s", target_file);
+                free(current_hash);
+                fclose(hashes);
                 return -1;
             }
 
             file_permissions = file_stat.st_mode;
 
-            // set file to readonly mode
-            if (chmod(target_file, S_IRUSR | S_IRGRP | S_IROTH) == -1)
-            {
+            if (chmod(target_file, S_IRUSR | S_IRGRP | S_IROTH) == -1) {
                 log_message(LL_ERROR, "Failed to change file permissions");
+                free(current_hash);
+                fclose(hashes);
                 return 1;
             }
 
-            printf("\nPossible malicious file detected: %s", target_file);
-
-            switch (get_user_input("\nWould you like to remove the file Y/N:"))
-            {
-            case 0:
-                // restore file permissions
-                chmod(target_file, file_permissions);
-                // Add whitelist option
-                if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
-                    add_to_whitelist(target_file);
-                    log_message(LL_INFO, "File added to whitelist successfully");
-                } else {
-                    log_message(LL_INFO, "File not added to whitelist");
+            if (automated_mode) {
+                log_message(LL_INFO, "Automated mode: Removing malicious file %s", target_file);
+                if (remove(target_file) != 0) {
+                    log_message(LL_ERROR, "Failed to remove file in automated mode: %s", strerror(errno));
                 }
-                break;
-            case 1:
-                // remove file
-                log_message(LL_INFO, "Removing file %s", target_file);
-                remove(target_file);
-                break;
+            } else {
+                printf("\nPossible malicious file detected: %s", target_file);
+                if (get_user_input("\nWould you like to remove the file Y/N:") == 1) {
+                    log_message(LL_INFO, "Removing file %s", target_file);
+                    if (remove(target_file) != 0) {
+                        log_message(LL_ERROR, "Failed to remove file: %s", strerror(errno));
+                    }
+                } else {
+                    if (get_user_input("\nWould you like to quarantine the file Y/N:") == 1) {
+                        struct stat st = {0};
+                        if (stat("/usr/local/share/pproc/quarantine", &st) == -1) {
+                            if (mkdir("/usr/local/share/pproc/quarantine", 0777) == -1) {
+                                log_message(LL_ERROR, "Failed to create quarantine directory: %s", strerror(errno));
+                                chmod(target_file, file_permissions);
+                                break;
+                            }
+                            chmod("/usr/local/share/pproc/quarantine", 0777);
+                        }
+
+                        const char *filename = strrchr(target_file, '/');
+                        filename = filename ? filename + 1 : target_file;
+                        
+                        char quarantine_path[PATH_MAX];
+                        snprintf(quarantine_path, sizeof(quarantine_path), 
+                                "/usr/local/share/pproc/quarantine/%s", filename);
+
+                        // Open source file
+                        FILE *src = fopen(target_file, "rb");
+                        if (!src) {
+                            log_message(LL_ERROR, "Failed to open source file for quarantine: %s", strerror(errno));
+                            chmod(target_file, file_permissions);
+                            break;
+                        }
+
+                        // Open destination file with explicit permissions
+                        FILE *dst = fopen(quarantine_path, "wb");
+                        if (!dst) {
+                            log_message(LL_ERROR, "Failed to open quarantine destination: %s", strerror(errno));
+                            fclose(src);
+                            chmod(target_file, file_permissions);
+                            break;
+                        }
+
+                        // Set permissions on the quarantine file
+                        chmod(quarantine_path, 0666);
+
+                        // Copy file contents
+                        char buf[8192];
+                        size_t size;
+                        int copy_success = 1;
+                        
+                        while ((size = fread(buf, 1, sizeof(buf), src)) > 0) {
+                            if (fwrite(buf, 1, size, dst) != size) {
+                                copy_success = 0;
+                                break;
+                            }
+                        }
+
+                        fclose(src);
+                        fclose(dst);
+
+                        if (copy_success) {
+                            if (remove(target_file) == 0) {
+                                log_message(LL_INFO, "File quarantined successfully: %s", filename);
+                            } else {
+                                log_message(LL_ERROR, "Failed to remove original file after quarantine: %s", strerror(errno));
+                                chmod(target_file, file_permissions);
+                                remove(quarantine_path);
+                            }
+                        } else {
+                            log_message(LL_ERROR, "Failed to copy file to quarantine: %s", strerror(errno));
+                            chmod(target_file, file_permissions);
+                            remove(quarantine_path);
+                        }
+                    } else {
+                        if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
+                            add_to_whitelist(target_file);
+                        }
+                        chmod(target_file, file_permissions);
+                    }
+                }
             }
+            
+            free(current_hash);
+            fclose(hashes);
             return 1;
         }
     }
 
-    // clean up by freeing resources
-    fclose(hashes);
     free(current_hash);
-
+    fclose(hashes);
     return 0;
 }
 
@@ -414,5 +499,30 @@ int get_user_input(char *prompt)
         {
             printf("\nInvalid input must be Y or N");
         }
+    }
+}
+
+// Function to get the hash of a file
+void get_file_hash(const char* file_path) {
+    char sha1_hash[SHA1_BUFFER_SIZE];
+    char sha256_hash[SHA256_BUFFER_SIZE];
+    char md5_hash[MD5_BUFFER_SIZE];
+
+    if (sha1_fingerprint_file(file_path, sha1_hash) == 0) {
+        printf("SHA1: %s\n", sha1_hash);
+    } else {
+        printf("Failed to calculate SHA1 hash for %s\n", file_path);
+    }
+
+    if (sha256_fingerprint_file(file_path, sha256_hash) == 0) {
+        printf("SHA256: %s\n", sha256_hash);
+    } else {
+        printf("Failed to calculate SHA256 hash for %s\n", file_path);
+    }
+
+    if (md5_fingerprint_file(file_path, md5_hash) == 0) {
+        printf("MD5: %s\n", md5_hash);
+    } else {
+        printf("Failed to calculate MD5 hash for %s\n", file_path);
     }
 }

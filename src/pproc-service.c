@@ -31,15 +31,13 @@ void log_message_service(const char *message) {
 
 // Function to handle file scanning when a new file is created
 void handle_new_file(const char *file_path) {
-    // Log the file path before starting the scan
     char log_msg[1024];
     snprintf(log_msg, sizeof(log_msg), "Starting scan for new file: %s", file_path);
     log_message_service(log_msg);
 
-    // Cast file_path to a non-const char* as expected by scan_file function
-    scan_file((char*)file_path);
+    // Call scan_file with automated_mode = 1
+    scan_file((char*)file_path, 1);
 
-    // Log the file path after the scan is complete
     snprintf(log_msg, sizeof(log_msg), "Scan complete for file: %s", file_path);
     log_message_service(log_msg);
 }

@@ -85,8 +85,15 @@ fi
 # Create the whitelist file with proper permissions
 sudo touch /usr/local/share/pproc/whitelist.txt
 sudo chmod 666 /usr/local/share/pproc/whitelist.txt
-sudo chown "$SUDO_USER:$SUDO_USER" /usr/local/share/pproc/whitelist.txt
+sudo chown root:root /usr/local/share/pproc/whitelist.txt
+sudo chmod 775 /usr/local/share/pproc
+sudo chmod 664 /usr/local/share/pproc/whitelist.txt
+sudo chmod 777 /usr/local/share/pproc
+sudo chmod 666 /usr/local/share/pproc/whitelist.txt
+sudo chown root:users /usr/local/share/pproc/whitelist.txt
 echo "Whitelist file created at /usr/local/share/pproc/whitelist.txt"
+
+
 
 echo "Program and hash data successfully installed"
 
@@ -104,4 +111,11 @@ if ! command -v crontab &> /dev/null; then
     sudo apt-get install cron
 fi
 
+# Create quarantine directory with proper permissions
+sudo mkdir -p /usr/local/share/pproc/quarantine
+sudo chown -R "$SUDO_USER:$SUDO_USER" /usr/local/share/pproc/quarantine
+sudo chmod -R 755 /usr/local/share/pproc
+sudo chmod 777 /usr/local/share/pproc/quarantine
+
 echo "Installation complete"
+

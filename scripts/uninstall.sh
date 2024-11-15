@@ -8,6 +8,9 @@ sudo rm -f /etc/systemd/system/pproc-service.service
 sudo systemctl daemon-reload
 
 # remove hash data
+# Ensure quarantine directory is writable before removal
+sudo chmod -R 777 /usr/local/share/pproc/quarantine
+sudo rm -rf /usr/local/share/pproc/quarantine/*
 sudo rm -rf /usr/local/share/pproc/
 echo "removing hash data from /usr/local/share/pproc/"
 
