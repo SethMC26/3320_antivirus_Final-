@@ -24,6 +24,7 @@ void list_scheduled_scans() {
 
 // Function to delete a scheduled scan
 void delete_scheduled_scan() {
+    list_scheduled_scans();
     char choice[10];
     int line_number;
     printf("Enter the number of the scheduled scan to delete: ");
