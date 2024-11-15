@@ -98,4 +98,10 @@ sudo systemctl start pproc-service
 
 echo "Systemd service installed and started"
 
+# Ensure the user can use cron
+if ! command -v crontab &> /dev/null; then
+    echo "Installing cron..."
+    sudo apt-get install cron
+fi
+
 echo "Installation complete"

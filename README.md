@@ -37,6 +37,46 @@ Add to whitelist?(still WIP)
 ```bash
 pproc add <file_path>
 ```
+## Schedule Directory Scans
+
+You can schedule directory scans using the `schedule` command. This command uses `cron` to automate the scanning process for a specific directory.
+
+### Example Usage
+
+To schedule a daily scan of `/home/user/Documents` at midnight, use the following command:
+
+```bash
+pproc schedule "0 0 * * *" /home/user/Documents
+```
+
+This will add a cron job that runs the scan every day at midnight for the specified directory.
+
+### Cron Schedule Format
+
+The schedule should be provided in the standard cron format:
+
+- `* * * * *` - Minute, Hour, Day of Month, Month, Day of Week
+- Example: `0 0 * * *` for daily at midnight
+
+### List Scheduled Scans
+
+To list all scheduled directory scans, use the following command:
+
+```bash
+pproc list-schedules
+```
+
+This will display all cron jobs related to directory scans.
+
+### Delete a Scheduled Scan
+
+To delete a scheduled directory scan, use the following command:
+
+```bash
+pproc delete-schedule
+```
+
+You will be prompted to enter the number of the scheduled scan you wish to delete.
 
 ## Print usage 
 ```bash

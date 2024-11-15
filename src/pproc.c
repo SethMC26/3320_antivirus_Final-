@@ -1,11 +1,52 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "Utils/scanner.h"
 
 // Forward declaration of the function if not included via a header
 void add_to_whitelist(const char* file_path);
+
+// Function to schedule a directory scan using cron
+void schedule_directory_scan(const char* schedule, const char* directory) {
+    char cron_command[512];
+    snprintf(cron_command, sizeof(cron_command), "(crontab -l 2>/dev/null; echo \"%s /usr/local/bin/pproc scan -d %s\") | crontab -", schedule, directory);
+    system(cron_command);
+    printf("Scheduled directory scan for %s with cron: %s\n", directory, schedule);
+}
+
+// Function to list scheduled scans
+void list_scheduled_scans() {
+    printf("Listing scheduled scans:\n");
+    system("crontab -l | grep 'pproc scan -d' | nl");
+}
+
+// Function to delete a scheduled scan
+void delete_scheduled_scan() {
+    char choice[10];
+    int line_number;
+    printf("Enter the number of the scheduled scan to delete: ");
+    fgets(choice, sizeof(choice), stdin);
+    line_number = atoi(choice);
+
+    if (line_number <= 0) {
+        printf("Invalid selection.\n");
+        return;
+    }
+
+    printf("Are you sure you want to delete schedule number %d? (Y/N): ", line_number);
+    fgets(choice, sizeof(choice), stdin);
+
+    if (choice[0] == 'Y' || choice[0] == 'y') {
+        char delete_command[512];
+        snprintf(delete_command, sizeof(delete_command), "crontab -l | grep -v 'pproc scan -d' | sed '%dd' | crontab -", line_number);
+        system(delete_command);
+        printf("Deleted schedule number %d.\n", line_number);
+    } else {
+        printf("Deletion cancelled.\n");
+    }
+}
 
 //might remove ascii art later but it is kinda fun 
 void printAsciiArt() {
@@ -43,20 +84,16 @@ void printAsciiArt() {
 }
 
 void print_usage(const char *program_name) {
-    printf("Penguin Protector Usage: \n");
-    printf("\nScan for malware \n");
-    printf("  %s scan <file_path>\n", program_name);
-    printf("  %s scan --all\n", program_name);
-    printf("  %s scan --directory\n", program_name);
-    printf("Options:\n");
-    printf("  -a, --all\t\tScan entire system for malware.\n");
-    printf("  -d, -dir, --directory\tScan files within a directory.\n");
-    printf("\nAdd file to whitelist\n");
-    printf("  %s add <file_path>\n", program_name);
-    printf("\nDisplay this message\n");
-    printf("  %s --help\n", program_name);
-    printf("Options:\n");
-    printf("  -h, --help\t\tDisplay this help message.\n");
+    printf("Usage: %s <command> [options]\n", program_name);
+    printf("Commands:\n");
+    printf("  scan <file_path>          Scan a specific file for malware.\n");
+    printf("  scan -d <directory_path>  Scan all files within a directory.\n");
+    printf("  scan --all                Scan the entire system for malware.\n");
+    printf("  add <file_path>           Add a file to the whitelist.\n");
+    printf("  schedule <cron> <dir>     Schedule a directory scan using cron.\n");
+    printf("  list-schedules            List all scheduled directory scans.\n");
+    printf("  delete-schedule           Delete a scheduled directory scan.\n");
+    printf("  --help, -h                Display this help message.\n");
 }
 
 
@@ -79,6 +116,31 @@ int main(int argc, char* argv[]) {
     //print help 
     if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
         print_usage(argv[0]);
+        return 0;
+    }
+
+    // Schedule a directory scan
+    if (strcmp(argv[1], "schedule") == 0) {
+        if (argc < 4) {
+            fprintf(stderr, "Error: Missing arguments for 'schedule'.\n");
+            print_usage(argv[0]);
+            return 1;
+        }
+        const char* schedule = argv[2];
+        const char* directory = argv[3];
+        schedule_directory_scan(schedule, directory);
+        return 0;
+    }
+
+    // List scheduled scans
+    if (strcmp(argv[1], "list-schedules") == 0) {
+        list_scheduled_scans();
+        return 0;
+    }
+
+    // Delete a scheduled scan
+    if (strcmp(argv[1], "delete-schedule") == 0) {
+        delete_scheduled_scan();
         return 0;
     }
 

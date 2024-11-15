@@ -11,6 +11,8 @@ sudo systemctl daemon-reload
 sudo rm -rf /usr/local/share/pproc/
 echo "removing hash data from /usr/local/share/pproc/"
 
+# Remove all scheduled cron jobs related to pproc
+crontab -l | grep -v 'pproc scan -d' | crontab -
 # remove binary
 sudo rm /usr/local/bin/pproc
 sudo rm /usr/local/bin/pproc-service
