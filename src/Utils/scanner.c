@@ -345,29 +345,23 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
             
             // save original file permissions in case we should restore
             struct stat file_stat;
-            unsigned int file_permissions;
-
             if (stat(target_file, &file_stat) == -1) {
                 log_message(LL_ERROR, "Could not stat file %s", target_file);
                 return -1;
             }
 
-            file_permissions = file_stat.st_mode;
-
             // set file to readonly mode
-            if (chmod(target_file, S_IRUSR | S_IRGRP | S_IROTH) == -1)
-            {
+            if (chmod(target_file, S_IRUSR | S_IRGRP | S_IROTH) == -1) {
                 log_message(LL_ERROR, "Failed to change file permissions");
                 return 1;
             }
 
             printf("\nPossible malicious file detected: %s", target_file);
 
-            switch (get_user_input("\nWould you like to remove the file Y/N:"))
-            {
+            switch (get_user_input("\nWould you like to quarantine the file Y/N:")) {
             case 0:
                 // restore file permissions
-                chmod(target_file, file_permissions);
+                chmod(target_file, file_stat.st_mode);
                 // Add whitelist option
                 if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
                     add_to_whitelist(target_file);
@@ -377,9 +371,14 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
                 }
                 break;
             case 1:
-                // remove file
-                log_message(LL_INFO, "Removing file %s", target_file);
-                remove(target_file);
+                // move file to quarantine
+                char quarantine_command[512];
+                snprintf(quarantine_command, sizeof(quarantine_command), "mv %s /usr/local/share/pproc/quarantine/", target_file);
+                if (system(quarantine_command) == 0) {
+                    log_message(LL_INFO, "Moved file to quarantine: %s", target_file);
+                } else {
+                    log_message(LL_ERROR, "Failed to move file to quarantine: %s", target_file);
+                }
                 break;
             }
             return 1;
@@ -414,5 +413,30 @@ int get_user_input(char *prompt)
         {
             printf("\nInvalid input must be Y or N");
         }
+    }
+}
+
+// Function to get the hash of a file
+void get_file_hash(const char* file_path) {
+    char sha1_hash[SHA1_BUFFER_SIZE];
+    char sha256_hash[SHA256_BUFFER_SIZE];
+    char md5_hash[MD5_BUFFER_SIZE];
+
+    if (sha1_fingerprint_file(file_path, sha1_hash) == 0) {
+        printf("SHA1: %s\n", sha1_hash);
+    } else {
+        printf("Failed to calculate SHA1 hash for %s\n", file_path);
+    }
+
+    if (sha256_fingerprint_file(file_path, sha256_hash) == 0) {
+        printf("SHA256: %s\n", sha256_hash);
+    } else {
+        printf("Failed to calculate SHA256 hash for %s\n", file_path);
+    }
+
+    if (md5_fingerprint_file(file_path, md5_hash) == 0) {
+        printf("MD5: %s\n", md5_hash);
+    } else {
+        printf("Failed to calculate MD5 hash for %s\n", file_path);
     }
 }

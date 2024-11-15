@@ -93,9 +93,28 @@ void print_usage(const char *program_name) {
     printf("  schedule <cron> <dir>     Schedule a directory scan using cron.\n");
     printf("  list-schedules            List all scheduled directory scans.\n");
     printf("  delete-schedule           Delete a scheduled directory scan.\n");
+    printf("  list-quarantine           List all files in quarantine.\n");
+    printf("  restore <file_name>        Restore a file from quarantine.\n");
+    printf("  get-hash <file_path>      Get the hash of a file.\n");
     printf("  --help, -h                Display this help message.\n");
 }
 
+// Function to list quarantined files
+void list_quarantined_files() {
+    printf("Listing quarantined files:\n");
+    system("ls /usr/local/share/pproc/quarantine | nl");
+}
+
+// Function to restore a quarantined file
+void restore_quarantined_file(const char* file_name) {
+    char restore_command[512];
+    snprintf(restore_command, sizeof(restore_command), "mv /usr/local/share/pproc/quarantine/%s ./", file_name);
+    if (system(restore_command) == 0) {
+        printf("Restored file: %s\n", file_name);
+    } else {
+        printf("Failed to restore file: %s\n", file_name);
+    }
+}
 
 int main(int argc, char* argv[]) {
     //file to scan
@@ -189,6 +208,28 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         file_to_add = argv[2];
+    }
+    else if (strcmp(argv[1], "list-quarantine") == 0) {
+        list_quarantined_files();
+        return 0;
+    }
+    else if (strcmp(argv[1], "restore") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, "Error: Missing argument for 'restore'.\n");
+            print_usage(argv[0]);
+            return 1;
+        }
+        restore_quarantined_file(argv[2]);
+        return 0;
+    }
+    else if (strcmp(argv[1], "get-hash") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, "Error: Missing argument for 'get-hash'.\n");
+            print_usage(argv[0]);
+            return 1;
+        }
+        get_file_hash(argv[2]);
+        return 0;
     }
     else {
         fprintf(stderr, "Error: Unrecognized option '%s'.\n", argv[1]);

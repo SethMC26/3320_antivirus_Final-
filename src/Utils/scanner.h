@@ -39,4 +39,7 @@ int scan_hashes(char* target_hash, char* target_file, char* hash_file, unsigned 
  */
 int get_user_input(char* prompt);
 
+// Function to get the hash of a file
+void get_file_hash(const char* file_path);
+
 #endif

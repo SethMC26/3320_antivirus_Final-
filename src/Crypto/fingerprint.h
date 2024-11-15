@@ -31,7 +31,7 @@ int compare_hashes(char* hash1, char* hash2);
  * 
  * @returns 0 if successful, 1 if there is an error. 
  */
-int sha1_fingerprint_file(char* target_file, char* hash_buffer);
+int sha1_fingerprint_file(const char* target_file, char* hash_buffer);
 
 /**
  * Computes the sha-256 hash of a file 
@@ -40,7 +40,7 @@ int sha1_fingerprint_file(char* target_file, char* hash_buffer);
  * 
  * @returns 0 if successful, 1 if there is an error. 
  */
-int sha256_fingerprint_file(char* target_file, char* hash_buffer);
+int sha256_fingerprint_file(const char* target_file, char* hash_buffer);
 
 /**
  * Computes the md5 hash of a file 
@@ -49,6 +49,6 @@ int sha256_fingerprint_file(char* target_file, char* hash_buffer);
  * 
  * @returns 0 if successful, 1 if there is an error. 
  */
-int md5_fingerprint_file(char* target_file, char* hash_buffer);
+int md5_fingerprint_file(const char* target_file, char* hash_buffer);
 
 #endif

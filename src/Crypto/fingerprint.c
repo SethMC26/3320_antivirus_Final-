@@ -15,26 +15,26 @@
  * @param target_file String with target_file 
  * @param hash_buffer char array to write output hash into must be size hash_length * 2 + 1
  */
-int compute_hash(char* target_file, char* hash_buffer, const EVP_MD* hashing_algorithm, unsigned int hash_length);
+int compute_hash(const char* target_file, char* hash_buffer, const EVP_MD* hashing_algorithm, unsigned int hash_length);
 
 int compare_hashes(char* hash1, char* hash2) {
     return strcmp(hash1, hash2);
 }
 
-int sha1_fingerprint_file(char* target_file, char* hash_buffer) {
+int sha1_fingerprint_file(const char* target_file, char* hash_buffer) {
     return compute_hash(target_file, hash_buffer, EVP_sha1(), SHA1_LENGTH);
 }
 
-int sha256_fingerprint_file(char* target_file, char* hash_buffer) {
+int sha256_fingerprint_file(const char* target_file, char* hash_buffer) {
     return compute_hash(target_file, hash_buffer, EVP_sha256(), SHA256_LENGTH);
 }
 
-int md5_fingerprint_file(char* target_file, char* hash_buffer) {
+int md5_fingerprint_file(const char* target_file, char* hash_buffer) {
     return compute_hash(target_file, hash_buffer, EVP_md5(), MD5_LENGTH);
 }
 
 
-int compute_hash(char* target_file, char* hash_buffer, const EVP_MD* hashing_algorithm, unsigned int hash_length) {
+int compute_hash(const char* target_file, char* hash_buffer, const EVP_MD* hashing_algorithm, unsigned int hash_length) {
     //open file to compute hash of 
     FILE* file = fopen(target_file, "rb");
     if (!file) {

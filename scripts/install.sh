@@ -104,4 +104,9 @@ if ! command -v crontab &> /dev/null; then
     sudo apt-get install cron
 fi
 
+# Create quarantine directory with proper permissions
+sudo mkdir -p /usr/local/share/pproc/quarantine
+sudo chmod 700 /usr/local/share/pproc/quarantine
+
 echo "Installation complete"
+
