@@ -77,14 +77,33 @@ int is_whitelisted(const char* target_path) {
 }
 
 void add_to_whitelist(const char* file_path) {
-    FILE *whitelist_file = fopen("/usr/local/share/pproc/whitelist.txt", "a");
-    if (whitelist_file == NULL) {
-        fprintf(stderr, "[ERROR] Could not open whitelist file for writing: %s\n", strerror(errno));
+    char command[PATH_MAX * 2];
+    
+    // Create directory and set permissions
+    snprintf(command, sizeof(command), 
+        "sudo sh -c '"
+        "mkdir -p /usr/local/share/pproc && "
+        "touch /usr/local/share/pproc/whitelist.txt && "
+        "chmod 777 /usr/local/share/pproc && "
+        "chmod 666 /usr/local/share/pproc/whitelist.txt'"
+    );
+    
+    if (system(command) != 0) {
+        log_message(LL_ERROR, "Failed to setup whitelist directory and permissions");
         return;
     }
 
-    fprintf(whitelist_file, "%s\n", file_path);
-    fclose(whitelist_file);
+    // Append to whitelist using echo and sudo
+    snprintf(command, sizeof(command), 
+        "echo '%s' | sudo tee -a /usr/local/share/pproc/whitelist.txt > /dev/null", 
+        file_path
+    );
+    
+    if (system(command) != 0) {
+        log_message(LL_ERROR, "Failed to add entry to whitelist");
+        return;
+    }
+
     log_message(LL_INFO, "Added %s to whitelist", file_path);
 }
 
