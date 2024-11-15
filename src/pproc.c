@@ -239,7 +239,7 @@ int main(int argc, char* argv[]) {
 
     //do target file scan
     if ( target_file != NULL) {
-        scan_file(target_file);
+        scan_file(target_file, 0);
     }
     //do target directory scan
     else if (target_directory != NULL) {

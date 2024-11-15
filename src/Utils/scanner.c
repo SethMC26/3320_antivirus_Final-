@@ -39,7 +39,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
  *
  * @returns 0 if scan did not find a matching hash, 1 if scan did find a matching has, -1 for an error
  */
-int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size);
+int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size, int automated_mode);
 
 /**
  * Gets yes or no user input
@@ -84,7 +84,7 @@ void add_to_whitelist(const char* file_path) {
     log_message(LL_INFO, "Added %s to whitelist", file_path);
 }
 
-int scan_file(char *target_file)
+int scan_file(char *target_file, int automated_mode)
 {
     // Check whitelist before scanning
     if (is_whitelisted(target_file)) {
@@ -108,7 +108,7 @@ int scan_file(char *target_file)
         return 1;
     }
 
-    scan_result = scan_hashes(target_sha1_hash, target_file, "/usr/local/share/pproc/sha1-hashes.txt", SHA1_BUFFER_SIZE);
+    scan_result = scan_hashes(target_sha1_hash, target_file, "/usr/local/share/pproc/sha1-hashes.txt", SHA1_BUFFER_SIZE, automated_mode);
     if (scan_result == 1) {
         log_message(LL_WARNING, "Malicious file detected (SHA1) in %s", target_file);
         return 0;
@@ -128,7 +128,7 @@ int scan_file(char *target_file)
         return 1;
     }
 
-    scan_result = scan_hashes(target_sha256_hash, target_file, "/usr/local/share/pproc/sha256-hashes.txt", SHA256_BUFFER_SIZE);
+    scan_result = scan_hashes(target_sha256_hash, target_file, "/usr/local/share/pproc/sha256-hashes.txt", SHA256_BUFFER_SIZE, automated_mode);
     if (scan_result == 1)
     {
         log_message(LL_WARNING, "Malicious file detected (SHA256) in %s", target_file);
@@ -151,7 +151,7 @@ int scan_file(char *target_file)
         return 1;
     }
 
-    scan_result = scan_hashes(target_md5_hash, target_file, "/usr/local/share/pproc/md5-hashes.txt", MD5_BUFFER_SIZE);
+    scan_result = scan_hashes(target_md5_hash, target_file, "/usr/local/share/pproc/md5-hashes.txt", MD5_BUFFER_SIZE, automated_mode);
     if (scan_result == 1)
     {
         log_message(LL_WARNING, "Malicious file detected (MD5) in %s", target_file);
@@ -181,12 +181,12 @@ void *scan_file_thread(void *arg)
     if (!data->is_directory)
     {
         log_message(LL_INFO, "Scanning file: %s", data->path);
-        scan_file(data->path); // Call your existing scan_file function
+        scan_file(data->path, 0);  // 0 for non-automated mode
     }
 
     log_message(LL_DEBUG, "Freeing resources for path: %s", data->path);
-    free(data->path); // Free the allocated memory for the path
-    free(data);       // Free the thread data structure
+    free(data->path);
+    free(data);
 
     pthread_exit(NULL);
 }
@@ -324,7 +324,7 @@ int scan_system()
     return result; // Return the result from scan_dir
 }
 
-int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size)
+int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size, int automated_mode)
 {
     char *current_hash = malloc(hash_buffer_size);
     FILE *hashes = fopen(hash_file, "r");
@@ -358,88 +358,92 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
                 return 1;
             }
 
-            printf("\nPossible malicious file detected: %s", target_file);
+            if (automated_mode) {
+                log_message(LL_INFO, "Automated mode: Removing malicious file %s", target_file);
+                if (remove(target_file) != 0) {
+                    log_message(LL_ERROR, "Failed to remove file in automated mode: %s", strerror(errno));
+                }
+            } else {
+                printf("\nPossible malicious file detected: %s", target_file);
+                if (get_user_input("\nWould you like to remove the file Y/N:") == 1) {
+                    log_message(LL_INFO, "Removing file %s", target_file);
+                    if (remove(target_file) != 0) {
+                        log_message(LL_ERROR, "Failed to remove file: %s", strerror(errno));
+                    }
+                } else {
+                    if (get_user_input("\nWould you like to quarantine the file Y/N:") == 1) {
+                        struct stat st = {0};
+                        if (stat("/usr/local/share/pproc/quarantine", &st) == -1) {
+                            if (mkdir("/usr/local/share/pproc/quarantine", 0777) == -1) {
+                                log_message(LL_ERROR, "Failed to create quarantine directory: %s", strerror(errno));
+                                chmod(target_file, file_permissions);
+                                break;
+                            }
+                            chmod("/usr/local/share/pproc/quarantine", 0777);
+                        }
 
-            switch (get_user_input("\nWould you like to remove the file Y/N:")) {
-            case 1:
-                log_message(LL_INFO, "Removing file %s", target_file);
-                remove(target_file);
-                break;
-            case 0:
-                if (get_user_input("\nWould you like to quarantine the file Y/N:") == 1) {
-                    // Ensure quarantine directory exists with proper permissions
-                    struct stat st = {0};
-                    if (stat("/usr/local/share/pproc/quarantine", &st) == -1) {
-                        if (mkdir("/usr/local/share/pproc/quarantine", 0777) == -1) {
-                            log_message(LL_ERROR, "Failed to create quarantine directory: %s", strerror(errno));
+                        const char *filename = strrchr(target_file, '/');
+                        filename = filename ? filename + 1 : target_file;
+                        
+                        char quarantine_path[PATH_MAX];
+                        snprintf(quarantine_path, sizeof(quarantine_path), 
+                                "/usr/local/share/pproc/quarantine/%s", filename);
+
+                        // Open source file
+                        FILE *src = fopen(target_file, "rb");
+                        if (!src) {
+                            log_message(LL_ERROR, "Failed to open source file for quarantine: %s", strerror(errno));
                             chmod(target_file, file_permissions);
                             break;
                         }
-                        chmod("/usr/local/share/pproc/quarantine", 0777);
-                    }
 
-                    const char *filename = strrchr(target_file, '/');
-                    filename = filename ? filename + 1 : target_file;
-                    
-                    char quarantine_path[PATH_MAX];
-                    snprintf(quarantine_path, sizeof(quarantine_path), 
-                            "/usr/local/share/pproc/quarantine/%s", filename);
-
-                    // Open source file
-                    FILE *src = fopen(target_file, "rb");
-                    if (!src) {
-                        log_message(LL_ERROR, "Failed to open source file for quarantine: %s", strerror(errno));
-                        chmod(target_file, file_permissions);
-                        break;
-                    }
-
-                    // Open destination file with explicit permissions
-                    FILE *dst = fopen(quarantine_path, "wb");
-                    if (!dst) {
-                        log_message(LL_ERROR, "Failed to open quarantine destination: %s", strerror(errno));
-                        fclose(src);
-                        chmod(target_file, file_permissions);
-                        break;
-                    }
-
-                    // Set permissions on the quarantine file
-                    chmod(quarantine_path, 0666);
-
-                    // Copy file contents
-                    char buf[8192];
-                    size_t size;
-                    int copy_success = 1;
-                    
-                    while ((size = fread(buf, 1, sizeof(buf), src)) > 0) {
-                        if (fwrite(buf, 1, size, dst) != size) {
-                            copy_success = 0;
+                        // Open destination file with explicit permissions
+                        FILE *dst = fopen(quarantine_path, "wb");
+                        if (!dst) {
+                            log_message(LL_ERROR, "Failed to open quarantine destination: %s", strerror(errno));
+                            fclose(src);
+                            chmod(target_file, file_permissions);
                             break;
                         }
-                    }
 
-                    fclose(src);
-                    fclose(dst);
+                        // Set permissions on the quarantine file
+                        chmod(quarantine_path, 0666);
 
-                    if (copy_success) {
-                        if (remove(target_file) == 0) {
-                            log_message(LL_INFO, "File quarantined successfully: %s", filename);
+                        // Copy file contents
+                        char buf[8192];
+                        size_t size;
+                        int copy_success = 1;
+                        
+                        while ((size = fread(buf, 1, sizeof(buf), src)) > 0) {
+                            if (fwrite(buf, 1, size, dst) != size) {
+                                copy_success = 0;
+                                break;
+                            }
+                        }
+
+                        fclose(src);
+                        fclose(dst);
+
+                        if (copy_success) {
+                            if (remove(target_file) == 0) {
+                                log_message(LL_INFO, "File quarantined successfully: %s", filename);
+                            } else {
+                                log_message(LL_ERROR, "Failed to remove original file after quarantine: %s", strerror(errno));
+                                chmod(target_file, file_permissions);
+                                remove(quarantine_path);
+                            }
                         } else {
-                            log_message(LL_ERROR, "Failed to remove original file after quarantine: %s", strerror(errno));
+                            log_message(LL_ERROR, "Failed to copy file to quarantine: %s", strerror(errno));
                             chmod(target_file, file_permissions);
                             remove(quarantine_path);
                         }
                     } else {
-                        log_message(LL_ERROR, "Failed to copy file to quarantine: %s", strerror(errno));
+                        if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
+                            add_to_whitelist(target_file);
+                        }
                         chmod(target_file, file_permissions);
-                        remove(quarantine_path);
                     }
-                } else {
-                    if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
-                        add_to_whitelist(target_file);
-                    }
-                    chmod(target_file, file_permissions);
                 }
-                break;
             }
             
             free(current_hash);
