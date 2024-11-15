@@ -31,6 +31,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 // Add at the top with other global variables
 pthread_mutex_t thread_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 int active_threads = 0;
+pthread_mutex_t whitelist_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // private method not included in header so we declare it here
 
@@ -55,9 +56,13 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
 int get_user_input(char *prompt);
 
 int is_whitelisted(const char* target_path) {
+    int result = 0;
+    pthread_mutex_lock(&whitelist_mutex);
+    
     FILE* whitelist_file = fopen(WHITELIST_PATH, "r");
     if (whitelist_file == NULL) {
         log_message(LL_DEBUG, "Whitelist file not found, assuming file is not whitelisted");
+        pthread_mutex_unlock(&whitelist_mutex);
         return 0;
     }
 
@@ -67,16 +72,19 @@ int is_whitelisted(const char* target_path) {
         line[strcspn(line, "\n")] = 0;
         
         if (strcmp(line, target_path) == 0) {
-            fclose(whitelist_file);
-            return 1;
+            result = 1;
+            break;
         }
     }
 
     fclose(whitelist_file);
-    return 0;
+    pthread_mutex_unlock(&whitelist_mutex);
+    return result;
 }
 
 void add_to_whitelist(const char* file_path) {
+    pthread_mutex_lock(&whitelist_mutex);
+    
     char command[PATH_MAX * 2];
     
     // Create directory and set permissions
@@ -90,6 +98,7 @@ void add_to_whitelist(const char* file_path) {
     
     if (system(command) != 0) {
         log_message(LL_ERROR, "Failed to setup whitelist directory and permissions");
+        pthread_mutex_unlock(&whitelist_mutex);
         return;
     }
 
@@ -101,10 +110,12 @@ void add_to_whitelist(const char* file_path) {
     
     if (system(command) != 0) {
         log_message(LL_ERROR, "Failed to add entry to whitelist");
+        pthread_mutex_unlock(&whitelist_mutex);
         return;
     }
 
     log_message(LL_INFO, "Added %s to whitelist", file_path);
+    pthread_mutex_unlock(&whitelist_mutex);
 }
 
 int scan_file(char *target_file, int automated_mode)
