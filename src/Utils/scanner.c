@@ -37,9 +37,9 @@ int active_threads = 0;
  *
  * @returns 0 if scan did not find a matching hash, 1 if scan did find a matching has, -1 for an error
  */
-int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size, int automated_mode);
+int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size);
 
-int scan_file(char *target_file, int automated_mode)
+int scan_file(char *target_file)
 {
     // Check whitelist before scanning
     pthread_mutex_lock(&whitelist_mutex);
@@ -68,7 +68,7 @@ int scan_file(char *target_file, int automated_mode)
         return 1;
     }
 
-    scan_result = scan_hashes(target_sha1_hash, target_file, "/usr/local/share/pproc/sha1-hashes.txt", SHA1_BUFFER_SIZE, automated_mode);
+    scan_result = scan_hashes(target_sha1_hash, target_file, "/usr/local/share/pproc/sha1-hashes.txt", SHA1_BUFFER_SIZE);
 
     if (scan_result == 1) {
         log_message(LL_INFO, "Malicious file detected (SHA1) in %s", target_file);
@@ -89,7 +89,7 @@ int scan_file(char *target_file, int automated_mode)
         return 1;
     }
 
-    scan_result = scan_hashes(target_sha256_hash, target_file, "/usr/local/share/pproc/sha256-hashes.txt", SHA256_BUFFER_SIZE, automated_mode);
+    scan_result = scan_hashes(target_sha256_hash, target_file, "/usr/local/share/pproc/sha256-hashes.txt", SHA256_BUFFER_SIZE);
 
     if (scan_result == 1)
     {
@@ -113,7 +113,7 @@ int scan_file(char *target_file, int automated_mode)
         return 1;
     }
 
-    scan_result = scan_hashes(target_md5_hash, target_file, "/usr/local/share/pproc/md5-hashes.txt", MD5_BUFFER_SIZE, automated_mode);
+    scan_result = scan_hashes(target_md5_hash, target_file, "/usr/local/share/pproc/md5-hashes.txt", MD5_BUFFER_SIZE);
     if (scan_result == 1)
     {
         log_message(LL_WARNING, "Malicious file detected (MD5) in %s", target_file);
@@ -149,7 +149,7 @@ void *scan_file_thread(void *arg)
     {
         // If it's a file, scan it
         log_message(LL_DEBUG, "Scanning file: %s", data->path);
-        scan_file(data->path, 0);  // 0 for non-automated mode
+        scan_file(data->path);  // 0 for non-automated mode
     }
 
     log_message(LL_DEBUG, "Freeing resources for path: %s", data->path);
@@ -274,7 +274,7 @@ int scan_system()
     return result; // Return the result from scan_dir
 }
 
-int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size, int automated_mode)
+int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size)
 {
     char *current_hash = malloc(hash_buffer_size);
     FILE *hashes = fopen(hash_file, "r");

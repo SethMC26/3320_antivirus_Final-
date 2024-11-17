@@ -36,7 +36,7 @@ void handle_new_file(const char *file_path) {
     log_message_service(log_msg);
 
     // Call scan_file with automated_mode = 1
-    scan_file((char*)file_path, 1);
+    scan_file((char*)file_path);
 
     snprintf(log_msg, sizeof(log_msg), "Scan complete for file: %s", file_path);
     log_message_service(log_msg);

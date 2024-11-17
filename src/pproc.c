@@ -201,7 +201,7 @@ int main(int argc, char* argv[]) {
                 return 1;
             } 
             check_if_root();
-            scan_file(argv[2], 0);
+            scan_file(argv[2]);
             return 0;
         }
     }
