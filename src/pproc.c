@@ -259,7 +259,7 @@ int main(int argc, char* argv[]) {
         if ((strcmp(argv[2], "-l") == 0) || (strcmp(argv[2], "--list") == 0)) {
             //check_if_root();
             printf("Listing quarantined files:\n");
-            system("cat /usr/local/share/pproc/quarantine_log.txt");
+            system("cat /usr/local/etc/pproc/quarantine_log.txt");
             return 0;
         }
         //restore files 

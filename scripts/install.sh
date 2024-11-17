@@ -91,9 +91,9 @@ sudo chown root:users /usr/local/etc/pproc/whitelist.txt
 echo "Whitelist file created at /usr/local/etc/pproc/whitelist.txt"
 
 # Add this section to create the quarantine log file
-sudo touch /usr/local/share/pproc/quarantine_log.txt
-sudo chmod 666 /usr/local/share/pproc/quarantine_log.txt
-echo "Quarantine log file created at /usr/local/share/pproc/quarantine_log.txt"
+sudo touch /usr/local/etc/pproc/quarantine_log.txt
+sudo chmod 666 /usr/local/etc/pproc/quarantine_log.txt
+echo "Quarantine log file created at /usr/local/etc/pproc/quarantine_log.txt"
 
 # create quarantine file 
 sudo mkdir -p /var/pproc/quarantine

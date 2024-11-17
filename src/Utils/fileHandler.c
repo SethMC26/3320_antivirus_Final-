@@ -42,7 +42,7 @@ int handle_malicious_file(const char* target_file) {
     rename(real_target_file_path, quaratine_filepath);
 
     // Log the original path
-    FILE *quarantine_log = fopen("/usr/local/share/pproc/quarantine_log.txt", "a");
+    FILE *quarantine_log = fopen("/usr/local/etc/pproc/quarantine_log.txt", "a");
     
     if (quarantine_log == NULL) {
         log_message(LL_ERROR, "Could not open quarantine log file");
@@ -133,8 +133,12 @@ void restore_quarantined_file(const char* file_name) {
 
     int found = 0;
 
-    FILE *quarantine_log = fopen("/usr/local/share/pproc/quarantine_log.txt", "r");
-
+    FILE *quarantine_log = fopen("/usr/local/etc/pproc/quarantine_log.txt", "r");
+    if (quarantine_log == NULL) {
+        log_message(LL_ERROR, "Could not find quarantine log file");
+        return;
+    }
+    
     while (fscanf(quarantine_log, "%s", original_path) != EOF) {
         if (strcmp(file_name, strrchr(original_path, '/') + 1) == 0) {
             found = 1;
