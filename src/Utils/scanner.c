@@ -438,6 +438,15 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
                         fclose(dst);
 
                         if (copy_success) {
+                            // Log the original path and permissions before removing the file
+                            FILE *quarantine_log = fopen("/usr/local/share/pproc/quarantine_log.txt", "a");
+                            if (quarantine_log) {
+                                fprintf(quarantine_log, "%s %o\n", target_file, file_permissions);
+                                fclose(quarantine_log);
+                            } else {
+                                log_message(LL_ERROR, "Failed to open quarantine log file");
+                            }
+
                             if (remove(target_file) == 0) {
                                 log_message(LL_INFO, "File quarantined successfully: %s", filename);
                             } else {
