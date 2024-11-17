@@ -37,12 +37,12 @@ if [ $? -ne 0 ]; then
 fi
 
 # Now compile the service program (pproc-service), explicitly including the necessary source files
-gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" \
-    "$PROJECT_ROOT/src/pproc-service.c" \
-    "$PROJECT_ROOT/src/Utils/scanner.c" \
-    "$PROJECT_ROOT/src/Crypto/fingerprint.c" \
-    "$PROJECT_ROOT/src/Utils/logger.c" \
-    -o "$SERVICE_BINARY" -lcrypto -D_GNU_SOURCE -DSERVICE_MAIN
+#gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" \
+#    "$PROJECT_ROOT/src/pproc-service.c" \
+#    "$PROJECT_ROOT/src/Utils/scanner.c" \
+#   "$PROJECT_ROOT/src/Crypto/fingerprint.c" \
+#    "$PROJECT_ROOT/src/Utils/logger.c" \
+#    -o "$SERVICE_BINARY" -lcrypto -D_GNU_SOURCE -DSERVICE_MAIN
 
 # Check if compilation succeeded for the service program
 if [ $? -ne 0 ]; then
@@ -52,13 +52,13 @@ fi
 
 # Move the binaries to /usr/local/bin (requires sudo)
 sudo mv "$OUTPUT_BINARY" /usr/local/bin/$OUTPUT_BINARY
-sudo mv "$SERVICE_BINARY" /usr/local/bin/$SERVICE_BINARY
-if [ $? -ne 0 ]; then
-    echo "Failed to move binaries to /usr/local/bin."
-    exit 1
-fi
+#sudo mv "$SERVICE_BINARY" /usr/local/bin/$SERVICE_BINARY
+#if [ $? -ne 0 ]; then
+#    echo "Failed to move binaries to /usr/local/bin."
+#    exit 1
+#fi
 
-echo "$OUTPUT_BINARY and $SERVICE_BINARY installed to /usr/local/bin"
+#echo "$OUTPUT_BINARY and $SERVICE_BINARY installed to /usr/local/bin"
 
 # Create directory to hold our data if it does not already exist
 sudo mkdir -p /usr/local/share/pproc
@@ -82,34 +82,29 @@ if [ -n "$SUDO_USER" ]; then
     chown "$SUDO_USER:$SUDO_USER" "$USER_HOME/pproc.log"
     chmod 644 "$USER_HOME/pproc.log"
 fi
+
 # Create the whitelist file with proper permissions
 sudo touch /usr/local/share/pproc/whitelist.txt
-sudo chmod 666 /usr/local/share/pproc/whitelist.txt
-sudo chown root:root /usr/local/share/pproc/whitelist.txt
-sudo chmod 775 /usr/local/share/pproc
-sudo chmod 664 /usr/local/share/pproc/whitelist.txt
 sudo chmod 777 /usr/local/share/pproc
 sudo chmod 666 /usr/local/share/pproc/whitelist.txt
 sudo chown root:users /usr/local/share/pproc/whitelist.txt
 echo "Whitelist file created at /usr/local/share/pproc/whitelist.txt"
 
-
-
 echo "Program and hash data successfully installed"
 
 # Install systemd service for the service program
-sudo cp "$SCRIPT_DIR/pproc-service.service" /etc/systemd/system/pproc-service.service
-sudo systemctl daemon-reload
-sudo systemctl enable pproc-service
-sudo systemctl start pproc-service
+#sudo cp "$SCRIPT_DIR/pproc-service.service" /etc/systemd/system/pproc-service.service
+#sudo systemctl daemon-reload
+#sudo systemctl enable pproc-service
+#sudo systemctl start pproc-service
 
-echo "Systemd service installed and started"
+#echo "Systemd service installed and started"
 
 # Ensure the user can use cron
-if ! command -v crontab &> /dev/null; then
-    echo "Installing cron..."
-    sudo apt-get install cron
-fi
+#if ! command -v crontab &> /dev/null; then
+#    echo "Installing cron..."
+#    sudo apt-get install cron
+#fi
 
 # Create quarantine directory with proper permissions
 sudo mkdir -p /usr/local/share/pproc/quarantine
