@@ -13,6 +13,17 @@
 #include "scanner.h"
 #include <linux/limits.h>
 
+#define MAX_THREADS 10 // Max number of concurrent threads to avoid overload
+// Path to the whitelist file
+#define WHITELIST_PATH "/usr/local/share/pproc/whitelist.txt"
+
+// Mutex for synchronization
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t thread_count_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t whitelist_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 // Thread data structure to hold the file or directory path
 typedef struct
 {
@@ -20,18 +31,7 @@ typedef struct
     int is_directory; // 1 if directory, 0 if file
 } thread_data_t;
 
-#define MAX_THREADS 10 // Max number of concurrent threads to avoid overload
-
-// Mutex for synchronization
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-// Path to the whitelist file
-#define WHITELIST_PATH "/usr/local/share/pproc/whitelist.txt"
-
-// Add at the top with other global variables
-pthread_mutex_t thread_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 int active_threads = 0;
-pthread_mutex_t whitelist_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // private method not included in header so we declare it here
 
