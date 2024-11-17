@@ -15,6 +15,7 @@
 #define MAX_THREADS 10 // Max number of concurrent threads to avoid overload
 
 pthread_mutex_t file_handler_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t whitelist_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Thread data structure to hold the file or directory path
 typedef struct
@@ -41,10 +42,12 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
 int scan_file(char *target_file, int automated_mode)
 {
     // Check whitelist before scanning
+    pthread_mutex_lock(&whitelist_mutex);
     if (is_whitelisted(target_file)) {
         log_message(LL_INFO, "Skipping whitelisted file: %s", target_file);
         return 0;
     }
+    pthread_mutex_unlock(&whitelist_mutex);
     
     // Hold different hashes for this file
     char target_sha1_hash[SHA1_BUFFER_SIZE];
@@ -54,7 +57,7 @@ int scan_file(char *target_file, int automated_mode)
     //hold result of scan
     int scan_result;
 
-    log_message(LL_INFO, "Starting File Scan for %s", target_file);
+    log_message(LL_DEBUG, "Starting File Scan for %s", target_file);
 
     // scan over sha1 hashes
     log_message(LL_DEBUG, "Scanning sha-1 hashes for %s", target_file);
@@ -67,7 +70,7 @@ int scan_file(char *target_file, int automated_mode)
     scan_result = scan_hashes(target_sha1_hash, target_file, "/usr/local/share/pproc/sha1-hashes.txt", SHA1_BUFFER_SIZE, automated_mode);
 
     if (scan_result == 1) {
-        log_message(LL_WARNING, "Malicious file detected (SHA1) in %s", target_file);
+        log_message(LL_INFO, "Malicious file detected (SHA1) in %s", target_file);
         return 0;
     } else if (scan_result == -1) {
         log_message(LL_ERROR, "Could not scan sha1 hash list for %s", target_file);
@@ -144,7 +147,7 @@ void *scan_file_thread(void *arg)
     else
     {
         // If it's a file, scan it
-        log_message(LL_INFO, "Scanning file: %s", data->path);
+        log_message(LL_DEBUG, "Scanning file: %s", data->path);
         scan_file(data->path, 0);  // 0 for non-automated mode
     }
 
@@ -162,7 +165,7 @@ void *scan_file_thread(void *arg)
  */
 int scan_dir(char *target_dir)
 {
-    log_message(LL_INFO, "Starting directory scan: %s", target_dir);
+    log_message(LL_DEBUG, "Starting directory scan: %s", target_dir);
 
     DIR *dir = opendir(target_dir);
     if (dir == NULL)
@@ -194,6 +197,7 @@ int scan_dir(char *target_dir)
         }
 
         thread_data_t *data = malloc(sizeof(thread_data_t));
+        
         if (data == NULL)
         {
             log_message(LL_ERROR, "Memory allocation failed for path: %s", path);
@@ -245,7 +249,7 @@ int scan_dir(char *target_dir)
         }
     }
 
-    log_message(LL_INFO, "Finished scanning directory: %s", target_dir);
+    log_message(LL_DEBUG, "Finished scanning directory: %s", target_dir);
     closedir(dir);
     return 0;
 }
@@ -289,8 +293,9 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
             //handle the file only one thread should do this at a time 
             pthread_mutex_lock(&file_handler_mutex);
 
-            if (handle_file(target_file) != 0) {
+            if (handle_malicious_file(target_file) != 0) {
                 log_message(LL_ERROR, "Could not proprely deal with file");
+                pthread_mutex_unlock(&file_handler_mutex);
                 return -1;
             }
 

@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <linux/limits.h>
@@ -11,7 +13,9 @@
 // Path to the whitelist file
 #define WHITELIST_PATH "/usr/local/share/pproc/whitelist.txt"
 
-int handle_file(const char* target_file) {
+int add_to_whitelist(const char* target_path);
+
+int handle_malicious_file(const char* target_file) {
     log_message(LL_WARNING, "Malicious file detected: %s", target_file);
     
     struct stat file_stat;
@@ -79,7 +83,6 @@ int handle_file(const char* target_file) {
             while ((size = fread(buf, 1, sizeof(buf), src)) > 0) {
                 if (fwrite(buf, 1, size, dst) != size) {
                     copy_success = 0;
-                    break;
                 }
             }
 
@@ -118,27 +121,28 @@ int handle_file(const char* target_file) {
 }
 
 
-int is_whitelisted(const char* target_path) {
-    int result = 0;
-    
+int is_whitelisted(const char* target_path) {    
     FILE* whitelist_file = fopen(WHITELIST_PATH, "r");
+
     if (whitelist_file == NULL) {
-        log_message(LL_DEBUG, "Whitelist file not found, assuming file is not whitelisted");
-        return 1;
+        log_message(LL_ERROR, "Whitelist file not found");
+        return -1;
     }
 
     char line[PATH_MAX];
+
     while (fgets(line, sizeof(line), whitelist_file)) {
         // Remove newline character
         line[strcspn(line, "\n")] = 0;
         
         if (strcmp(line, target_path) == 0) {
-            result = 1;
+            fclose(whitelist_file);
+            return 1;
         }
     }
 
     fclose(whitelist_file);
-    return result;
+    return 0;
 }
 
 int add_to_whitelist(const char* file_path) {    
@@ -170,6 +174,7 @@ int add_to_whitelist(const char* file_path) {
     }
 
     log_message(LL_INFO, "Added %s to whitelist", file_path);
+    return 0;
 }
 
 int get_user_input(char *prompt)

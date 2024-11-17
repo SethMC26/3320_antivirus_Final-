@@ -1,8 +1,9 @@
 #ifndef FILEHANDLER_H
 #define FILEHANDLER_H
 
-int handle_file(const char* target_file);
+int handle_malicious_file(const char* target_file);
 
+int is_whitelisted(const char* target_path);
 /**
  * Gets yes or no user input
  *
