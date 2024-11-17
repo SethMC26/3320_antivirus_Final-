@@ -33,13 +33,4 @@ int scan_system();
  */
 int scan_hashes(char* target_hash, char* target_file, char* hash_file, unsigned int hash_buffer_size, int automated_mode);
 
-/**
- * Gets yes or no user input
- * @param prompt String with prompt for user
- * @returns 1 if yes, 0 if no
- */
-int get_user_input(char* prompt);
-
-void get_file_hash(const char* file_path);
-
 #endif

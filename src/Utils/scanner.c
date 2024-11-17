@@ -7,11 +7,12 @@
 #include <unistd.h>
 #include <linux/limits.h>
 #include <errno.h>
+#include <linux/limits.h>
 
 #include "Crypto/fingerprint.h"
 #include "Utils/logger.h"
+#include "Utils/fileHandler.h"
 #include "scanner.h"
-#include <linux/limits.h>
 
 #define MAX_THREADS 10 // Max number of concurrent threads to avoid overload
 // Path to the whitelist file
@@ -45,15 +46,6 @@ int active_threads = 0;
  * @returns 0 if scan did not find a matching hash, 1 if scan did find a matching has, -1 for an error
  */
 int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned int hash_buffer_size, int automated_mode);
-
-/**
- * Gets yes or no user input
- *
- * @param prompt String with prompt for user
- *
- * @returns 1 if yes 0 if no
- */
-int get_user_input(char *prompt);
 
 int is_whitelisted(const char* target_path) {
     int result = 0;
@@ -476,53 +468,4 @@ int scan_hashes(char *target_hash, char *target_file, char *hash_file, unsigned 
     free(current_hash);
     fclose(hashes);
     return 0;
-}
-
-int get_user_input(char *prompt)
-{
-    char input;
-
-    // iterate until we get a good value
-    while (1)
-    {
-        printf("%s", prompt);
-        scanf("%c", &input);
-        if (input == 'y' || input == 'Y')
-        {
-            return 1;
-        }
-        else if (input == 'n' || input == 'N')
-        {
-            return 0;
-        }
-        else
-        {
-            printf("\nInvalid input must be Y or N");
-        }
-    }
-}
-
-// Function to get the hash of a file
-void get_file_hash(const char* file_path) {
-    char sha1_hash[SHA1_BUFFER_SIZE];
-    char sha256_hash[SHA256_BUFFER_SIZE];
-    char md5_hash[MD5_BUFFER_SIZE];
-
-    if (sha1_fingerprint_file(file_path, sha1_hash) == 0) {
-        printf("SHA1: %s\n", sha1_hash);
-    } else {
-        printf("Failed to calculate SHA1 hash for %s\n", file_path);
-    }
-
-    if (sha256_fingerprint_file(file_path, sha256_hash) == 0) {
-        printf("SHA256: %s\n", sha256_hash);
-    } else {
-        printf("Failed to calculate SHA256 hash for %s\n", file_path);
-    }
-
-    if (md5_fingerprint_file(file_path, md5_hash) == 0) {
-        printf("MD5: %s\n", md5_hash);
-    } else {
-        printf("Failed to calculate MD5 hash for %s\n", file_path);
-    }
 }
