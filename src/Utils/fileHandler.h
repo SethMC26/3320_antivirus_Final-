@@ -1,6 +1,8 @@
 #ifndef FILEHANDLER_H
 #define FILEHANDLER_H
 
+int handle_file(const char* target_file);
+
 /**
  * Gets yes or no user input
  *
