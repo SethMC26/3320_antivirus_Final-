@@ -185,8 +185,12 @@ int get_user_input(char *prompt)
     while (1)
     {
         printf("%s", prompt);
+
         scanf("%c", &input);
 
+        //clear input buffer for next call 
+        getchar();
+        
         if (input == 'y' || input == 'Y')
         {
             return 1;
