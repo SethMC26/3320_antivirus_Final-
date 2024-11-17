@@ -93,7 +93,10 @@ sudo chmod 666 /usr/local/share/pproc/whitelist.txt
 sudo chown root:users /usr/local/share/pproc/whitelist.txt
 echo "Whitelist file created at /usr/local/share/pproc/whitelist.txt"
 
-
+# Add this section to create the quarantine log file
+sudo touch /usr/local/share/pproc/quarantine_log.txt
+sudo chmod 666 /usr/local/share/pproc/quarantine_log.txt
+echo "Quarantine log file created at /usr/local/share/pproc/quarantine_log.txt"
 
 echo "Program and hash data successfully installed"
 

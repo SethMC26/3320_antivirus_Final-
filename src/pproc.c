@@ -2,6 +2,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <linux/limits.h>
+#include <sys/stat.h>
 
 #include "Utils/scanner.h"
 
@@ -108,12 +110,37 @@ void list_quarantined_files() {
 
 // Function to restore a quarantined file
 void restore_quarantined_file(const char* file_name) {
-    char restore_command[512];
-    snprintf(restore_command, sizeof(restore_command), "mv /usr/local/share/pproc/quarantine/%s ./", file_name);
-    if (system(restore_command) == 0) {
-        printf("Restored file: %s\n", file_name);
+    char restore_command[PATH_MAX * 2];
+    FILE *quarantine_log = fopen("/usr/local/share/pproc/quarantine_log.txt", "r");
+    if (quarantine_log) {
+        char original_path[PATH_MAX];
+        unsigned int original_permissions;
+        int found = 0;
+
+        while (fscanf(quarantine_log, "%s %o", original_path, &original_permissions) != EOF) {
+            if (strcmp(file_name, strrchr(original_path, '/') + 1) == 0) {
+                found = 1;
+                break;
+            }
+        }
+        fclose(quarantine_log);
+
+        if (found) {
+            if (snprintf(restore_command, sizeof(restore_command), "mv /usr/local/share/pproc/quarantine/%s %s", file_name, original_path) < (int)sizeof(restore_command)) {
+                if (system(restore_command) == 0) {
+                    chmod(original_path, original_permissions);
+                    printf("Restored file: %s\n", file_name);
+                } else {
+                    printf("Failed to restore file: %s\n", file_name);
+                }
+            } else {
+                printf("Restore command buffer overflow for file: %s\n", file_name);
+            }
+        } else {
+            printf("Original path and permissions not found for file: %s\n", file_name);
+        }
     } else {
-        printf("Failed to restore file: %s\n", file_name);
+        printf("Failed to open quarantine log file\n");
     }
 }
 
