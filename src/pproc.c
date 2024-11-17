@@ -10,9 +10,6 @@
 #include "Utils/fileHandler.h"
 #include "Services/scheduler.h"
 
-// Forward declaration of the function if not included via a header
-void add_to_whitelist(const char* file_path);
-
 void check_if_root(); 
 
 //might remove ascii art later but it is kinda fun 
@@ -52,19 +49,29 @@ void printAsciiArt() {
 
 void print_usage(const char *program_name) {
     printf("Usage: %s <command> [options]\n", program_name);
-    printf("Commands:\n");
+    printf("\n---- General Commands ----\n");
+    printf("  --help, -h                Display this help message.\n");
+    
+    printf("\n---- Scan for Malicious Files! ----\n");
     printf("  scan <file_path>          Scan a specific file for malware.\n");
     printf("  scan -d <directory_path>  Scan all files within a directory.\n");
     printf("  scan --all                Scan the entire system for malware.\n");
-    printf("  add <file_path>           Add a file to the whitelist.\n");
+    
+    printf("\n---- Whitelist Commands ----\n");
+    printf("  whitelist -a <file_path>  Add a file to the whitelist.\n");
+    printf("  whitelist -l              List all files in the whitelist.\n");
+    
+    printf("\n---- Scheduled Scans ----\n");
     printf("  schedule <cron> <dir>     Schedule a directory scan using cron.\n");
     printf("  list-schedules            List all scheduled directory scans.\n");
     printf("  delete-schedule           Delete a scheduled directory scan.\n");
+    
+    printf("\n---- Quarantine Commands ----\n");
     printf("  list-quarantine           List all files in quarantine.\n");
-    printf("  restore <file_name>        Restore a file from quarantine.\n");
+    printf("  restore <file_name>       Restore a file from quarantine.\n");
     printf("  get-hash <file_path>      Get the hash of a file.\n");
-    printf("  --help, -h                Display this help message.\n");
 }
+
 
 // Function to list quarantined files
 void list_quarantined_files() {
@@ -159,21 +166,6 @@ int main(int argc, char* argv[]) {
     // Before root check
     log_message(LL_DEBUG, "Checking root privileges...");
     
-    // After root check
-    if (geteuid() != 0) {
-        log_message(LL_WARNING, "Running without root privileges - limited functionality");
-    } else {
-        log_message(LL_INFO, "Running with root privileges");
-    }
-    //file to scan
-    char* target_file = NULL;
-    //directory to scan
-    char* target_directory = NULL;
-    //scan entire system
-    int scan_all = 0;
-    //add file
-    char* file_to_add = NULL;
-
     //catch case of not enough args to avoid undefined behavoir
     if (argc < 2) {
         printAsciiArt();
@@ -219,12 +211,14 @@ int main(int argc, char* argv[]) {
             print_usage(argv[0]);
             return 1;
         }
-        //scan all
+        //scan all argument
         if ((strcmp(argv[2], "-a") == 0) || (strcmp(argv[2], "--all") == 0)) {
             check_if_root();
-            scan_all = 1;
+            scan_system();
+            return 0;
         }
-        //scan directory
+
+        //scan directory argument
         else if ((strcmp(argv[2], "-d") == 0) || (strcmp(argv[2], "-dir") == 0) || (strcmp(argv[2], "--directory") == 0)) {
             check_if_root();
             if (argc < 4) {
@@ -232,8 +226,10 @@ int main(int argc, char* argv[]) {
                 print_usage(argv[0]);
                 return 1;
             }
-            target_directory = argv[3];
+            scan_dir(argv[3]);
+            return 0;
         }
+        //user gave bad argument 
         else if (argv[2][0] == '-') {
             fprintf(stderr, "Error: No argument %s exists\n", argv[2]);
             print_usage(argv[0]);
@@ -248,23 +244,48 @@ int main(int argc, char* argv[]) {
                 return 1;
             } 
             check_if_root();
-            target_file = argv[2];
+            scan_file(argv[2], 0);
+            return 0;
         }
     }
-    //add file to white list 
-    else if ((strcmp(argv[1], "add") == 0 )) {
+
+    //white list option 
+    else if ((strcmp(argv[1], "whitelist") == 0 )) {
         if (argc < 3) {
-            fprintf(stderr,"Error: Missing argument for 'add'.\n");
+            fprintf(stderr,"Error: Missing argument for whitelist.\n");
             print_usage(argv[0]);
             return 1;
         }
-        check_if_root();
-        file_to_add = argv[2];
+
+        //add file to white list 
+        if ((strcmp(argv[2], "-a") == 0) || (strcmp(argv[2], "--add") == 0)) {
+             if (argc < 4) {
+                fprintf(stderr, "Error: Missing file for 'whitelist %s'.\n", argv[2]);
+                print_usage(argv[0]);
+                return 1;
+            }
+            check_if_root();
+            add_to_whitelist(argv[3]);
+            return 0;
+        }
+        else if ((strcmp(argv[2], "-l") == 0) || (strcmp(argv[2], "--list") == 0)) {
+            //check_if_root();
+            printf("Whitelist file: \n");
+            system("cat /usr/local/etc/pproc/whitelist.txt");
+        }
+        //user gave us bad argument 
+        else if (argv[2][0] == '-') {
+            fprintf(stderr, "Error: No argument %s exists\n", argv[2]);
+            print_usage(argv[0]);
+            return 1;
+        }
     }
+
     else if (strcmp(argv[1], "list-quarantine") == 0) {
         list_quarantined_files();
         return 0;
     }
+
     else if (strcmp(argv[1], "restore") == 0) {
         if (argc < 3) {
             fprintf(stderr, "Error: Missing argument for 'restore'.\n");
@@ -275,6 +296,7 @@ int main(int argc, char* argv[]) {
         restore_quarantined_file(argv[2]);
         return 0;
     }
+    //get hash of file 
     else if (strcmp(argv[1], "get-hash") == 0) {
         if (argc < 3) {
             fprintf(stderr, "Error: Missing argument for 'get-hash'.\n");
@@ -289,38 +311,12 @@ int main(int argc, char* argv[]) {
         print_usage(argv[0]);
         return 1;
     }
-
-    //do target file scan
-    if ( target_file != NULL) {
-        scan_file(target_file, 0);
-    }
-    //do target directory scan
-    else if (target_directory != NULL) {
-        scan_dir(target_directory);
-    }
-    //scan entire file system
-    else if ( scan_all ) {
-        scan_system();
-        //may want to use scanning a directory logic but set directory to "/";
-    }
-    //add file 
-    else if ( file_to_add != NULL) {
-        printf("Adding file %s to whitelist\n", file_to_add);
-        add_to_whitelist(file_to_add);
-    }
-    else {
-        fprintf(stderr, "Error: No valid arguments provided.\n");
-        print_usage(argv[0]);
-        return 1;
-    }
-
-    return 0;
 }
 
 void check_if_root() {
     // Check if the current user is root
     if (getuid() != 0) {
-        fprintf(stderr, "This program requires superuser privileges. Please run it with sudo.\n");
+        fprintf(stderr, "\nThis program requires superuser privileges. Please run it with sudo.\n");
         exit(1);  // Exit the program if not root
     }
 }
