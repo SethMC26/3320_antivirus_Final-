@@ -72,49 +72,6 @@ void print_usage(const char *program_name) {
     printf("  get-hash <file_path>      Get the hash of a file.\n");
 }
 
-
-// Function to list quarantined files
-void list_quarantined_files() {
-    printf("Listing quarantined files:\n");
-    system("ls /usr/local/share/pproc/quarantine | nl");
-}
-
-// Function to restore a quarantined file
-void restore_quarantined_file(const char* file_name) {
-    char restore_command[PATH_MAX * 2];
-    FILE *quarantine_log = fopen("/usr/local/share/pproc/quarantine_log.txt", "r");
-    if (quarantine_log) {
-        char original_path[PATH_MAX];
-        unsigned int original_permissions;
-        int found = 0;
-
-        while (fscanf(quarantine_log, "%s %o", original_path, &original_permissions) != EOF) {
-            if (strcmp(file_name, strrchr(original_path, '/') + 1) == 0) {
-                found = 1;
-                break;
-            }
-        }
-        fclose(quarantine_log);
-
-        if (found) {
-            if (snprintf(restore_command, sizeof(restore_command), "mv /usr/local/share/pproc/quarantine/%s %s", file_name, original_path) < (int)sizeof(restore_command)) {
-                if (system(restore_command) == 0) {
-                    chmod(original_path, original_permissions);
-                    printf("Restored file: %s\n", file_name);
-                } else {
-                    printf("Failed to restore file: %s\n", file_name);
-                }
-            } else {
-                printf("Restore command buffer overflow for file: %s\n", file_name);
-            }
-        } else {
-            printf("Original path and permissions not found for file: %s\n", file_name);
-        }
-    } else {
-        printf("Failed to open quarantine log file\n");
-    }
-}
-
 int main(int argc, char* argv[]) {
      // Default verbosity level
     LogLevel verbosity = LL_INFO;
@@ -260,10 +217,19 @@ int main(int argc, char* argv[]) {
         //add file to white list 
         if ((strcmp(argv[2], "-a") == 0) || (strcmp(argv[2], "--add") == 0)) {
              if (argc < 4) {
+                //check if file exists
+             
                 fprintf(stderr, "Error: Missing file for 'whitelist %s'.\n", argv[2]);
                 print_usage(argv[0]);
                 return 1;
             }
+            //check if file exists 
+            if (access(argv[3], F_OK) == -1) {
+                fprintf(stderr, "Error: Could not find file %s\n", argv[3]);
+                print_usage(argv[0]);
+                return 1;
+            }
+
             check_if_root();
             add_to_whitelist(argv[3]);
             return 0;
@@ -281,20 +247,41 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    else if (strcmp(argv[1], "list-quarantine") == 0) {
-        list_quarantined_files();
-        return 0;
-    }
-
-    else if (strcmp(argv[1], "restore") == 0) {
+    //quarantine command 
+    else if (strcmp(argv[1], "quarantine") == 0) {
         if (argc < 3) {
-            fprintf(stderr, "Error: Missing argument for 'restore'.\n");
+            fprintf(stderr,"Error: Missing argument for quarantine.\n");
             print_usage(argv[0]);
             return 1;
         }
-        check_if_root();
-        restore_quarantined_file(argv[2]);
-        return 0;
+        
+        //list quarantined files 
+        if ((strcmp(argv[2], "-l") == 0) || (strcmp(argv[2], "--list") == 0)) {
+            //check_if_root();
+            printf("Listing quarantined files:\n");
+            system("cat /usr/local/share/pproc/quarantine_log.txt");
+            return 0;
+        }
+        //restore files 
+        else if((strcmp(argv[2], "-r") == 0) || (strcmp(argv[2], "--restore") == 0)) {
+            if (argc < 4) {
+                fprintf(stderr,"Error: missing filename .\n");
+                print_usage(argv[0]);
+                return 1;
+            }
+            check_if_root();
+            //restore file 
+            restore_quarantined_file(argv[3]);
+            return 0;
+        }
+
+        //user gave us bad argument 
+        else if (argv[2][0] == '-') {
+            fprintf(stderr, "Error: No argument %s exists\n", argv[2]);
+            print_usage(argv[0]);
+            return 1;
+        }
+        
     }
     //get hash of file 
     else if (strcmp(argv[1], "get-hash") == 0) {

@@ -21,6 +21,9 @@ int is_whitelisted(const char* target_file);
  */
 int add_to_whitelist(const char* target_file);
 
+
+void restore_quarantined_file(const char* file_name);
+
 /**
  * Gets yes or no user input
  *

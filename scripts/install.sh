@@ -95,6 +95,13 @@ sudo touch /usr/local/share/pproc/quarantine_log.txt
 sudo chmod 666 /usr/local/share/pproc/quarantine_log.txt
 echo "Quarantine log file created at /usr/local/share/pproc/quarantine_log.txt"
 
+# create quarantine file 
+sudo mkdir -p /var/pproc/quarantine
+sudo chmod -x /var/pproc/quarantine
+sudo chown root:root /var/pproc/quarantine
+#sudo chmod 755 /var/pproc/quarantine
+echo "Created quarantine directory file"
+
 echo "Program and hash data successfully installed"
 
 # Install systemd service for the service program

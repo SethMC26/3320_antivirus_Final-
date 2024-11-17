@@ -17,20 +17,39 @@
 int handle_malicious_file(const char* target_file) {
     log_message(LL_WARNING, "Malicious file detected: %s", target_file);
     
-    struct stat file_stat;
-    unsigned int file_permissions;
+    //hold file paths 
+    char real_target_file_path[PATH_MAX];
+    char quaratine_filepath[PATH_MAX];
 
-    if (stat(target_file, &file_stat) == -1) {
-        log_message(LL_ERROR, "Could not stat file %s", target_file);
-        return -1;
+    //find absolute file path of target
+    realpath(target_file, real_target_file_path);
+
+    // Find the last '/' in the path
+    char *filename = strrchr(real_target_file_path, '/');
+    
+    // If a '/' was found, move past it to get the file name
+    if (filename) {
+        filename++;  // Skip the '/' character
+    } else {
+        filename = real_target_file_path;  // If no '/', the whole path is the file name
+    }
+    
+    snprintf(quaratine_filepath,PATH_MAX, "%s%s","/var/pproc/quarantine/", filename);
+
+    log_message(LL_INFO, "Quarantining malicious file: %s to %s", real_target_file_path, quaratine_filepath);
+
+    //move file to quarantine directory
+    rename(real_target_file_path, quaratine_filepath);
+
+    // Log the original path
+    FILE *quarantine_log = fopen("/usr/local/share/pproc/quarantine_log.txt", "a");
+    
+    if (quarantine_log == NULL) {
+        log_message(LL_ERROR, "Could not open quarantine log file");
     }
 
-    file_permissions = file_stat.st_mode;
-
-    if (chmod(target_file, S_IRUSR | S_IRGRP | S_IROTH) == -1) {
-        log_message(LL_ERROR, "Failed to change file permissions");
-        return 1;
-    }
+    fprintf(quarantine_log, "%s\n", real_target_file_path);
+    fclose(quarantine_log);
 
     printf("\nPossible malicious file detected: %s", target_file);
     if (get_user_input("\nWould you like to remove the file Y/N:") == 1) {
@@ -38,86 +57,13 @@ int handle_malicious_file(const char* target_file) {
         if (remove(target_file) != 0) {
             log_message(LL_ERROR, "Failed to remove file: %s", strerror(errno));
         }
-    } else {
-        if (get_user_input("\nWould you like to quarantine the file Y/N:") == 1) {
-            struct stat st = {0};
-            if (stat("/usr/local/share/pproc/quarantine", &st) == -1) {
-                if (mkdir("/usr/local/share/pproc/quarantine", 0777) == -1) {
-                    log_message(LL_ERROR, "Failed to create quarantine directory: %s", strerror(errno));
-                    chmod(target_file, file_permissions);
-                }
-                chmod("/usr/local/share/pproc/quarantine", 0777);
-            }
-
-            const char *filename = strrchr(target_file, '/');
-            filename = filename ? filename + 1 : target_file;
-            
-            char quarantine_path[PATH_MAX];
-            snprintf(quarantine_path, sizeof(quarantine_path), 
-                    "/usr/local/share/pproc/quarantine/%s", filename);
-
-            // Open source file
-            FILE *src = fopen(target_file, "rb");
-            if (!src) {
-                log_message(LL_ERROR, "Failed to open source file for quarantine: %s", strerror(errno));
-                chmod(target_file, file_permissions);
-            }
-
-            // Open destination file with explicit permissions
-            FILE *dst = fopen(quarantine_path, "wb");
-            if (!dst) {
-                log_message(LL_ERROR, "Failed to open quarantine destination: %s", strerror(errno));
-                fclose(src);
-                chmod(target_file, file_permissions);
-            }
-
-            // Set permissions on the quarantine file
-            chmod(quarantine_path, 0666);
-
-            // Copy file contents
-            char buf[8192];
-            size_t size;
-            int copy_success = 1;
-            
-            while ((size = fread(buf, 1, sizeof(buf), src)) > 0) {
-                if (fwrite(buf, 1, size, dst) != size) {
-                    copy_success = 0;
-                }
-            }
-
-            fclose(src);
-            fclose(dst);
-
-            if (copy_success) {
-                // Log the original path and permissions before removing the file
-                FILE *quarantine_log = fopen("/usr/local/share/pproc/quarantine_log.txt", "a");
-                if (quarantine_log) {
-                    fprintf(quarantine_log, "%s %o\n", target_file, file_permissions);
-                    fclose(quarantine_log);
-                } else {
-                    log_message(LL_ERROR, "Failed to open quarantine log file");
-                }
-
-                if (remove(target_file) == 0) {
-                    log_message(LL_INFO, "File quarantined successfully: %s", filename);
-                } else {
-                    log_message(LL_ERROR, "Failed to remove original file after quarantine: %s", strerror(errno));
-                    chmod(target_file, file_permissions);
-                    remove(quarantine_path);
-                }
-            } else {
-                log_message(LL_ERROR, "Failed to copy file to quarantine: %s", strerror(errno));
-                chmod(target_file, file_permissions);
-                remove(quarantine_path);
-            }
-        } else {
-            if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
-                add_to_whitelist(target_file);
-            }
-            chmod(target_file, file_permissions);
+    } else  {
+        if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
+            add_to_whitelist(target_file);
         }
     }
 }
+
 
 
 int is_whitelisted(const char* target_file) {  
@@ -170,14 +116,41 @@ int add_to_whitelist(const char* file_path) {
         return -1;
     }
 
-    // Append the absolute path to the file, followed by a newline
     log_message(LL_WARNING, "Added %s to whitelist", absolute_path);
 
+    // Append the absolute path to the file, followed by a newline
     fprintf(whitelist_file, "%s\n", absolute_path);
 
     // Close the file
     fclose(whitelist_file);
     return 0;
+}
+
+// Function to restore a quarantined file
+void restore_quarantined_file(const char* file_name) {
+    char original_path[PATH_MAX];
+    char quarantine_file_path[PATH_MAX];
+
+    int found = 0;
+
+    FILE *quarantine_log = fopen("/usr/local/share/pproc/quarantine_log.txt", "r");
+
+    while (fscanf(quarantine_log, "%s", original_path) != EOF) {
+        if (strcmp(file_name, strrchr(original_path, '/') + 1) == 0) {
+            found = 1;
+            break;
+        }
+    }
+
+    fclose(quarantine_log);
+
+    snprintf(quarantine_file_path,PATH_MAX, "%s%s","/var/pproc/quarantine/", file_name);
+
+    if (found) {
+        rename(quarantine_file_path, original_path);
+    } else {
+        printf("Original path and permissions not found for file: %s\n", file_name);
+    }
 }
 
 int get_user_input(char *prompt)
