@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 
 #include "Utils/scanner.h"
+#include "Utils/logger.h"
 #include "Utils/fileHandler.h"
 #include "Services/scheduler.h"
 
@@ -106,6 +107,62 @@ void restore_quarantined_file(const char* file_name) {
 }
 
 int main(int argc, char* argv[]) {
+     // Default verbosity level
+    LogLevel verbosity = LL_INFO;
+    
+    // Parse verbosity flag before initializing logger
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
+            if (i + 1 < argc) {
+                if (strcmp(argv[i + 1], "error") == 0) {
+                    verbosity = LL_ERROR;
+                } else if (strcmp(argv[i + 1], "warning") == 0) {
+                    verbosity = LL_WARNING;
+                } else if (strcmp(argv[i + 1], "info") == 0) {
+                    verbosity = LL_INFO;
+                } else if (strcmp(argv[i + 1], "debug") == 0) {
+                    verbosity = LL_DEBUG;
+                } else {
+                    fprintf(stderr, "Invalid verbosity level. Using default (info)\n");
+                }
+                // Skip the next argument since we processed it
+                i++;
+            }
+        }
+    }
+
+    // Initialize logger with verbosity settings
+    if (geteuid() != 0) {
+        const char *home = getenv("HOME");
+        if (home == NULL) {
+            fprintf(stderr, "Cannot determine home directory\n");
+            return 1;
+        }
+        char log_file_path[PATH_MAX];
+        snprintf(log_file_path, sizeof(log_file_path), "%s/pproc.log", home);
+        init_logger(log_file_path, verbosity, LL_DEBUG);
+        log_message(LL_DEBUG, "Logger initialized for non-root user at %s", log_file_path);
+    } else {
+        init_logger("/var/log/pproc.log", verbosity, LL_DEBUG);
+        log_message(LL_DEBUG, "Logger initialized for root user at /var/log/pproc.log");
+    }
+
+    // At program startup (after logger init)
+    log_message(LL_INFO, "Penguin Protector v1.0 starting up");
+    log_message(LL_DEBUG, "Command line arguments: argc=%d", argc);
+    for (int i = 0; i < argc; i++) {
+        log_message(LL_DEBUG, "argv[%d]: %s", i, argv[i]);
+    }
+    
+    // Before root check
+    log_message(LL_DEBUG, "Checking root privileges...");
+    
+    // After root check
+    if (geteuid() != 0) {
+        log_message(LL_WARNING, "Running without root privileges - limited functionality");
+    } else {
+        log_message(LL_INFO, "Running with root privileges");
+    }
     //file to scan
     char* target_file = NULL;
     //directory to scan
