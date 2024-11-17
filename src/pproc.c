@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "Utils/scanner.h"
+#include "Utils/fileHandler.h"
 
 // Forward declaration of the function if not included via a header
 void add_to_whitelist(const char* file_path);
