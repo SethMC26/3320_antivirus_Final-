@@ -13,6 +13,8 @@
 // Forward declaration of the function if not included via a header
 void add_to_whitelist(const char* file_path);
 
+void check_if_root(); 
+
 //might remove ascii art later but it is kinda fun 
 void printAsciiArt() {
     const char* asciiArt[] = {
@@ -219,10 +221,12 @@ int main(int argc, char* argv[]) {
         }
         //scan all
         if ((strcmp(argv[2], "-a") == 0) || (strcmp(argv[2], "--all") == 0)) {
+            check_if_root();
             scan_all = 1;
         }
         //scan directory
         else if ((strcmp(argv[2], "-d") == 0) || (strcmp(argv[2], "-dir") == 0) || (strcmp(argv[2], "--directory") == 0)) {
+            check_if_root();
             if (argc < 4) {
                 fprintf(stderr, "Error: Missing directory for 'scan %s'.\n", argv[2]);
                 print_usage(argv[0]);
@@ -243,6 +247,7 @@ int main(int argc, char* argv[]) {
                 print_usage(argv[0]);
                 return 1;
             } 
+            check_if_root();
             target_file = argv[2];
         }
     }
@@ -253,6 +258,7 @@ int main(int argc, char* argv[]) {
             print_usage(argv[0]);
             return 1;
         }
+        check_if_root();
         file_to_add = argv[2];
     }
     else if (strcmp(argv[1], "list-quarantine") == 0) {
@@ -265,6 +271,7 @@ int main(int argc, char* argv[]) {
             print_usage(argv[0]);
             return 1;
         }
+        check_if_root();
         restore_quarantined_file(argv[2]);
         return 0;
     }
@@ -308,4 +315,12 @@ int main(int argc, char* argv[]) {
     }
 
     return 0;
+}
+
+void check_if_root() {
+    // Check if the current user is root
+    if (getuid() != 0) {
+        fprintf(stderr, "This program requires superuser privileges. Please run it with sudo.\n");
+        exit(1);  // Exit the program if not root
+    }
 }

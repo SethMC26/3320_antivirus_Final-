@@ -45,6 +45,7 @@ int scan_file(char *target_file, int automated_mode)
     pthread_mutex_lock(&whitelist_mutex);
     if (is_whitelisted(target_file)) {
         log_message(LL_INFO, "Skipping whitelisted file: %s", target_file);
+        pthread_mutex_unlock(&whitelist_mutex);
         return 0;
     }
     pthread_mutex_unlock(&whitelist_mutex);

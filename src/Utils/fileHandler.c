@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -11,7 +12,7 @@
 #include "fileHandler.h"
 
 // Path to the whitelist file
-#define WHITELIST_PATH "/usr/local/share/pproc/whitelist.txt"
+#define WHITELIST_PATH "/usr/local/etc/pproc/whitelist.txt"
 
 int add_to_whitelist(const char* target_path);
 
@@ -121,7 +122,15 @@ int handle_malicious_file(const char* target_file) {
 }
 
 
-int is_whitelisted(const char* target_path) {    
+int is_whitelisted(const char* target_file) {  
+    char absolute_path[PATH_MAX];
+
+    //add absolute path of file to white list 
+    if (realpath(target_file, absolute_path) == NULL) {
+        log_message(LL_ERROR, "Failed to resolve absolute path");
+        return -1;
+    }
+
     FILE* whitelist_file = fopen(WHITELIST_PATH, "r");
 
     if (whitelist_file == NULL) {
@@ -135,7 +144,7 @@ int is_whitelisted(const char* target_path) {
         // Remove newline character
         line[strcspn(line, "\n")] = 0;
         
-        if (strcmp(line, target_path) == 0) {
+        if (strcmp(line, absolute_path) == 0) {
             fclose(whitelist_file);
             return 1;
         }
@@ -145,35 +154,31 @@ int is_whitelisted(const char* target_path) {
     return 0;
 }
 
-int add_to_whitelist(const char* file_path) {    
-    char command[PATH_MAX * 2];
-    
-    // Create directory and set permissions
-    snprintf(command, sizeof(command), 
-        "sudo sh -c '"
-        "mkdir -p /usr/local/share/pproc && "
-        "touch /usr/local/share/pproc/whitelist.txt && "
-        "chmod 777 /usr/local/share/pproc && "
-        "chmod 666 /usr/local/share/pproc/whitelist.txt'"
-    );
-    
-    if (system(command) != 0) {
-        log_message(LL_ERROR, "Failed to setup whitelist directory and permissions");
-        return 1;
+int add_to_whitelist(const char* file_path) {  
+    char absolute_path[PATH_MAX];
+
+    //add absolute path of file to white list 
+    if (realpath(file_path, absolute_path) == NULL) {
+        log_message(LL_ERROR, "Failed to resolve absolute path");
+        return -1;
     }
 
-    // Append to whitelist using echo and sudo
-    snprintf(command, sizeof(command), 
-        "echo '%s' | sudo tee -a /usr/local/share/pproc/whitelist.txt > /dev/null", 
-        file_path
-    );
-    
-    if (system(command) != 0) {
-        log_message(LL_ERROR, "Failed to add entry to whitelist");
-        return 1;
+    // Open the whitelist file in append mode
+    FILE* whitelist_file = fopen(WHITELIST_PATH, "a");
+
+    if (whitelist_file == NULL) {
+        perror("fopen failed");  // This will print the actual error
+        log_message(LL_ERROR, "Whitelist file not found");
+        return -1;
     }
 
-    log_message(LL_INFO, "Added %s to whitelist", file_path);
+    // Append the absolute path to the file, followed by a newline
+    log_message(LL_WARNING, "Added %s to whitelist", absolute_path);
+
+    fprintf(whitelist_file, "%s\n", absolute_path);
+
+    // Close the file
+    fclose(whitelist_file);
     return 0;
 }
 

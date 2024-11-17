@@ -3,7 +3,7 @@
 
 int handle_malicious_file(const char* target_file);
 
-int is_whitelisted(const char* target_path);
+int is_whitelisted(const char* target_file);
 /**
  * Gets yes or no user input
  *

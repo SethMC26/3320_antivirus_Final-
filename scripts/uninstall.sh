@@ -14,6 +14,9 @@ sudo rm -rf /usr/local/share/pproc/quarantine/*
 sudo rm -rf /usr/local/share/pproc/
 echo "removing hash data from /usr/local/share/pproc/"
 
+#remove config data(white list)
+ sudo rm -rf /usr/local/etc/pproc
+ 
 # Remove all scheduled cron jobs related to pproc
 crontab -l | grep -v 'pproc scan -d' | crontab -
 # remove binary
@@ -21,7 +24,6 @@ sudo rm /usr/local/bin/pproc
 sudo rm /usr/local/bin/pproc-service
 echo "Removed binaries from /usr/local"
 
-=======
 echo "Removed binary from /usr/local"
 
 #remove logs 

@@ -28,7 +28,7 @@ sudo touch /var/log/pproc.log
 sudo chmod 666 /var/log/pproc.log
 
 # Compile the source files for the CLI program (pproc)
-gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" -pthread $SRC_FILES -o "$OUTPUT_BINARY" -lcrypto
+gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" -pthread $SRC_FILES -o "$OUTPUT_BINARY" -lcrypto 
 
 # Check if compilation succeeded for the CLI program
 if [ $? -ne 0 ]; then
@@ -84,11 +84,11 @@ if [ -n "$SUDO_USER" ]; then
 fi
 
 # Create the whitelist file with proper permissions
-sudo touch /usr/local/share/pproc/whitelist.txt
-sudo chmod 777 /usr/local/share/pproc
-sudo chmod 666 /usr/local/share/pproc/whitelist.txt
-sudo chown root:users /usr/local/share/pproc/whitelist.txt
-echo "Whitelist file created at /usr/local/share/pproc/whitelist.txt"
+sudo mkdir -p /usr/local/etc/pproc
+sudo touch /usr/local/etc/pproc/whitelist.txt
+sudo chmod 644 /usr/local/etc/pproc/whitelist.txt
+sudo chown root:users /usr/local/etc/pproc/whitelist.txt
+echo "Whitelist file created at /usr/local/etc/pproc/whitelist.txt"
 
 # Add this section to create the quarantine log file
 sudo touch /usr/local/share/pproc/quarantine_log.txt
