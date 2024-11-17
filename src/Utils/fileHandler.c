@@ -14,8 +14,6 @@
 // Path to the whitelist file
 #define WHITELIST_PATH "/usr/local/etc/pproc/whitelist.txt"
 
-int add_to_whitelist(const char* target_path);
-
 int handle_malicious_file(const char* target_file) {
     log_message(LL_WARNING, "Malicious file detected: %s", target_file);
     
