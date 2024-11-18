@@ -172,6 +172,7 @@ int main(int argc, char* argv[]) {
         if ((strcmp(argv[2], "-a") == 0) || (strcmp(argv[2], "--all") == 0)) {
             check_if_root();
             scan_system();
+            log_message(LL_INFO, "Scan of system complete");
             return 0;
         }
 
@@ -184,6 +185,7 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
             scan_dir(argv[3]);
+            log_message(LL_INFO, "Scan of directory: %s complete ", argv[3]);
             return 0;
         }
         //user gave bad argument 
@@ -202,6 +204,7 @@ int main(int argc, char* argv[]) {
             } 
             check_if_root();
             scan_file(argv[2]);
+            log_message(LL_INFO, "Scan of file: %s complete", argv[2]);
             return 0;
         }
     }

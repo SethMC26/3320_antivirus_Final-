@@ -59,7 +59,13 @@ int handle_malicious_file(const char* target_file) {
         }
     } else  {
         if (get_user_input("\nWould you like to add this file to the whitelist Y/N:") == 1) {
+            //we add to whitelist so unquarantine the file 
+            log_message(LL_DEBUG, "Restoring file: %s from quarantine", target_file);
+            restore_quarantined_file(filename);
+
+            log_message(LL_DEBUG, "Adding file to white  absolute path f absolute path f %s", target_file);
             add_to_whitelist(target_file);
+            
         }
     }
 }
@@ -99,11 +105,13 @@ int is_whitelisted(const char* target_file) {
 }
 
 int add_to_whitelist(const char* file_path) {  
+    log_message(LL_DEBUG, "Adding file to whitelist %s", file_path);
+
     char absolute_path[PATH_MAX];
 
     //add absolute path of file to white list 
     if (realpath(file_path, absolute_path) == NULL) {
-        log_message(LL_ERROR, "Failed to resolve absolute path");
+        log_message(LL_ERROR, "Failed to resolve absolute path for file %s: ", file_path);
         return -1;
     }
 
@@ -116,7 +124,7 @@ int add_to_whitelist(const char* file_path) {
         return -1;
     }
 
-    log_message(LL_WARNING, "Added %s to whitelist", absolute_path);
+    log_message(LL_DEBUG, "Added %s to whitelist", absolute_path);
 
     // Append the absolute path to the file, followed by a newline
     fprintf(whitelist_file, "%s\n", absolute_path);
