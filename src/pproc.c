@@ -50,26 +50,40 @@ void printAsciiArt() {
 void print_usage(const char *program_name) {
     printf("Usage: %s <command> [options]\n", program_name);
     printf("\n---- General Commands ----\n");
-    printf("  --help, -h                Display this help message.\n");
+    printf("  -h, --help                  Display this help message.\n");
+    printf("  -v, --verbose <level>       Set verbosity level (error, warning, info, debug).\n");
     
-    printf("\n---- Scan for Malicious Files! ----\n");
-    printf("  scan <file_path>          Scan a specific file for malware.\n");
-    printf("  scan -d <directory_path>  Scan all files within a directory.\n");
-    printf("  scan --all                Scan the entire system for malware.\n");
+    printf("\n---- Scan Commands ----\n");
+    printf("  scan <file_path>            Scan a specific file for malware.\n");
+    printf("  -d, --dir <directory_path>  Scan all files within a directory.\n");
+    printf("  -a, --all                   Scan the entire system for malware.\n");
     
     printf("\n---- Whitelist Commands ----\n");
-    printf("  whitelist -a <file_path>  Add a file to the whitelist.\n");
-    printf("  whitelist -l              List all files in the whitelist.\n");
+    printf("  -a, --add <file_path>       Add a file to the whitelist.\n");
+    printf("  -l, --list                  List all files in the whitelist.\n");
     
     printf("\n---- Scheduled Scans ----\n");
-    printf("  schedule <cron> <dir>     Schedule a directory scan using cron.\n");
-    printf("  list-schedules            List all scheduled directory scans.\n");
-    printf("  delete-schedule           Delete a scheduled directory scan.\n");
+    printf("  schedule <cron> <dir>       Schedule a directory scan using cron.\n");
+    printf("  list-schedules              List all scheduled directory scans.\n");
+    printf("  delete-schedule             Delete a scheduled directory scan.\n");
     
     printf("\n---- Quarantine Commands ----\n");
-    printf("  list-quarantine           List all files in quarantine.\n");
-    printf("  restore <file_name>       Restore a file from quarantine.\n");
-    printf("  get-hash <file_path>      Get the hash of a file.\n");
+    printf("  -l, --list                  List all files in quarantine.\n");
+    printf("  -r, --restore <file_name>   Restore a file from quarantine.\n");
+    
+    printf("\n---- Utility Commands ----\n");
+    printf("  get-hash <file_path>        Get the hash of a file.\n");
+
+    printf("\n---- Examples ----\n");
+    printf("  %s scan /path/to/file            Scan a specific file for malware.\n", program_name);
+    printf("  %s scan -d /path/to/directory    Scan all files in a directory.\n", program_name);
+    printf("  %s scan -a                       Scan the entire system for malware.\n", program_name);
+    printf("  %s whitelist --add /path/to/file Add a file to the whitelist.\n", program_name);
+    printf("  %s schedule \"0 0 * * *\" /path    Schedule a nightly scan at midnight.\n", program_name);
+    printf("  %s quarantine --list             List all files in quarantine.\n", program_name);
+    printf("  %s quarantine --restore file.txt Restore a quarantined file.\n", program_name);
+
+    printf("\nNote: Some commands require root privileges. Run with sudo if needed.\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -172,6 +186,7 @@ int main(int argc, char* argv[]) {
         if ((strcmp(argv[2], "-a") == 0) || (strcmp(argv[2], "--all") == 0)) {
             check_if_root();
             scan_system();
+            log_message(LL_INFO, "Scan of system complete");
             return 0;
         }
 
@@ -184,6 +199,7 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
             scan_dir(argv[3]);
+            log_message(LL_INFO, "Scan of directory: %s complete ", argv[3]);
             return 0;
         }
         //user gave bad argument 
@@ -202,6 +218,7 @@ int main(int argc, char* argv[]) {
             } 
             check_if_root();
             scan_file(argv[2]);
+            log_message(LL_INFO, "Scan of file: %s complete", argv[2]);
             return 0;
         }
     }
