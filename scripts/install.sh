@@ -28,20 +28,24 @@ sudo touch /var/log/pproc.log
 sudo chmod 666 /var/log/pproc.log
 
 # Compile the source files for the CLI program (pproc)
-gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" -pthread $SRC_FILES -o "$OUTPUT_BINARY" -lcrypto
+gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" -pthread $SRC_FILES -o "$OUTPUT_BINARY" -lcrypto 
 
 # Check if compilation succeeded for the CLI program
 if [ $? -ne 0 ]; then
     echo "Compilation of $OUTPUT_BINARY failed."
     exit 1
 fi
+echo "Successfully compiled pproc CLI"
 
 # Now compile the service program (pproc-service), explicitly including the necessary source files
+#Note we should find a better way to do this
 gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" \
     "$PROJECT_ROOT/src/pproc-service.c" \
     "$PROJECT_ROOT/src/Utils/scanner.c" \
-    "$PROJECT_ROOT/src/Crypto/fingerprint.c" \
+   "$PROJECT_ROOT/src/Crypto/fingerprint.c" \
     "$PROJECT_ROOT/src/Utils/logger.c" \
+    "$PROJECT_ROOT/src/Utils/fileHandler.c" \
+    "$PROJECT_ROOT/src/Services/scheduler.c" \
     -o "$SERVICE_BINARY" -lcrypto -D_GNU_SOURCE -DSERVICE_MAIN
 
 # Check if compilation succeeded for the service program
@@ -58,7 +62,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "$OUTPUT_BINARY and $SERVICE_BINARY installed to /usr/local/bin"
+#echo "$OUTPUT_BINARY and $SERVICE_BINARY installed to /usr/local/bin"
 
 # Create directory to hold our data if it does not already exist
 sudo mkdir -p /usr/local/share/pproc
@@ -82,21 +86,25 @@ if [ -n "$SUDO_USER" ]; then
     chown "$SUDO_USER:$SUDO_USER" "$USER_HOME/pproc.log"
     chmod 644 "$USER_HOME/pproc.log"
 fi
+
 # Create the whitelist file with proper permissions
-sudo touch /usr/local/share/pproc/whitelist.txt
-sudo chmod 666 /usr/local/share/pproc/whitelist.txt
-sudo chown root:root /usr/local/share/pproc/whitelist.txt
-sudo chmod 775 /usr/local/share/pproc
-sudo chmod 664 /usr/local/share/pproc/whitelist.txt
-sudo chmod 777 /usr/local/share/pproc
-sudo chmod 666 /usr/local/share/pproc/whitelist.txt
-sudo chown root:users /usr/local/share/pproc/whitelist.txt
-echo "Whitelist file created at /usr/local/share/pproc/whitelist.txt"
+sudo mkdir -p /usr/local/etc/pproc
+sudo touch /usr/local/etc/pproc/whitelist.txt
+sudo chmod 644 /usr/local/etc/pproc/whitelist.txt
+sudo chown root:users /usr/local/etc/pproc/whitelist.txt
+echo "Whitelist file created at /usr/local/etc/pproc/whitelist.txt"
 
 # Add this section to create the quarantine log file
-sudo touch /usr/local/share/pproc/quarantine_log.txt
-sudo chmod 666 /usr/local/share/pproc/quarantine_log.txt
-echo "Quarantine log file created at /usr/local/share/pproc/quarantine_log.txt"
+sudo touch /usr/local/etc/pproc/quarantine_log.txt
+sudo chmod 666 /usr/local/etc/pproc/quarantine_log.txt
+echo "Quarantine log file created at /usr/local/etc/pproc/quarantine_log.txt"
+
+# create quarantine file 
+sudo mkdir -p /var/pproc/quarantine
+sudo chmod -x /var/pproc/quarantine
+sudo chown root:root /var/pproc/quarantine
+#sudo chmod 755 /var/pproc/quarantine
+echo "Created quarantine directory file"
 
 echo "Program and hash data successfully installed"
 
