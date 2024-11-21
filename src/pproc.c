@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <dirent.h> //for working with directories
 #include <unistd.h>
 #include <stdlib.h>
 #include <linux/limits.h>
@@ -12,7 +13,13 @@
 #include "Services/scheduler.h"
 
 void check_if_root();
-void *check_thread(void *args);
+void scan_multi();
+
+typedef struct
+{
+    char *file_path;
+    int thread_id;
+} ThreadArgs;
 
 // might remove ascii art later but it is kinda fun
 void printAsciiArt()
@@ -92,8 +99,6 @@ void print_usage(const char *program_name)
 
     printf("\nNote: Some commands require root privileges. Run with sudo if needed.\n");
 }
-
-// create thread function
 
 int main(int argc, char *argv[])
 {
@@ -371,6 +376,86 @@ int main(int argc, char *argv[])
         print_usage(argv[0]);
         return 1;
     }
+
+    // Multithreading option
+    else if (strcmp(argv *[1], "--threads") == 0)
+    {
+        if (argc < 3)
+        {
+            fprintf(stderr, "Error: Must specify thread count.\n");
+            return 1;
+        }
+
+        // Get number of threads
+        int num_threads = atoi(argc[2]);
+        else if (num_threads < 0)
+        {
+            fprintf(stderr, "Error: Thread count must exceed 0.\n");
+            return 1;
+        }
+
+        // Scan directory using specified amount of threads
+        scan_multi("path/to/directory", num_threads);
+        return 0;
+    }
+}
+
+// Unfinished
+//  scan multiple directories/files
+void scan_multi(const char *dpath, num_threads)
+{
+    pthread_t threads[num_threads];
+    int i = 0;
+
+    DIR *directory = opendir(dpath);
+    if (!directory)
+    {
+        perror("Error: Could not open directory.\n");
+        return;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(directory)) != NULL)
+    {
+        if ((*entry).d_type == DT_REG)
+        {
+            char file_path[PATH_MAX];
+            snprintf(file_path, max_path, "%s%s", dpath, entry->d_name);
+
+            // allocation of thread args
+            ThreadArgs *args = malloc(sizeof(ThreadArgs));
+            (*args).file_path = strdup(file_path);
+            (*args).thread_id = i;
+
+            if (pthread_create(&threads[i], NULL, scan_fthrd, args) != 0)
+            {
+                perror("Error: Could not create thread.");
+                free((*args).file_path);
+                free(args);
+                continue;
+            }
+
+            i++;
+
+            // Threads need to finish
+            if (i >= num_threads)
+            {
+                for (int j = 0; j < num_threads; j++)
+                {
+                    pthread_join(threads[j], NULL);
+                }
+                i = 0; // Reset
+            }
+        }
+    }
+
+    // Wait for remaining threads and join them
+    for (int j = 0; j < i; j++)
+    {
+        pthread_join(threads[j], NULL);
+    }
+
+    closedir(directory);
 }
 
 void check_if_root()
