@@ -370,15 +370,9 @@ int main(int argc, char *argv[])
         get_file_hash(argv[2]);
         return 0;
     }
-    else
-    {
-        fprintf(stderr, "Error: Unrecognized option '%s'.\n", argv[1]);
-        print_usage(argv[0]);
-        return 1;
-    }
 
     // Multithreading option
-    else if (strcmp(argv *[1], "--threads") == 0)
+    else if (strcmp(argv[1], "--threads") == 0)
     {
         if (argc < 3)
         {
@@ -387,16 +381,25 @@ int main(int argc, char *argv[])
         }
 
         // Get number of threads
-        int num_threads = atoi(argc[2]);
-        else if (num_threads < 0)
+        int num_threads = atoi(argv[2]);
+
+        // check that thread count is valid
+        if (num_threads <= 0)
         {
             fprintf(stderr, "Error: Thread count must exceed 0.\n");
             return 1;
         }
 
         // Scan directory using specified amount of threads
-        scan_multi("path/to/directory", num_threads);
+        scan_multi(argv[3], num_threads);
         return 0;
+    }
+
+    else
+    {
+        fprintf(stderr, "Error: Unrecognized option '%s'.\n", argv[1]);
+        print_usage(argv[0]);
+        return 1;
     }
 }
 
