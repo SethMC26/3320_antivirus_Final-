@@ -405,7 +405,7 @@ int main(int argc, char *argv[])
 
 // Unfinished
 //  scan multiple directories/files
-void scan_multi(const char *dpath, num_threads)
+void scan_multi(const char *dpath, int num_threads)
 {
     pthread_t threads[num_threads];
     int i = 0;
@@ -423,14 +423,14 @@ void scan_multi(const char *dpath, num_threads)
         if ((*entry).d_type == DT_REG)
         {
             char file_path[PATH_MAX];
-            snprintf(file_path, max_path, "%s%s", dpath, entry->d_name);
+            snprintf(file_path, PATH_MAX, "%s%s", dpath, entry->d_name);
 
             // allocation of thread args
             ThreadArgs *args = malloc(sizeof(ThreadArgs));
             (*args).file_path = strdup(file_path);
             (*args).thread_id = i;
 
-            if (pthread_create(&threads[i], NULL, scan_fthrd, args) != 0)
+            if (pthread_create(&threads[i], NULL, scan_dir, args) != 0)
             {
                 perror("Error: Could not create thread.");
                 free((*args).file_path);
