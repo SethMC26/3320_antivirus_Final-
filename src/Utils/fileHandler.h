@@ -32,6 +32,13 @@ int add_to_whitelist(const char* target_file);
 void restore_quarantined_file(const char* file_name);
 
 /**
+ * Cleans quarantined files by deleting all files in it 
+ * 
+ * @returns unsigned int - 0 if successfull, nonzero if failure 
+ */
+int clean_quarantine_dir();
+
+/**
  * Gets yes or no user input
  *
  * @param prompt String with prompt for user

@@ -140,6 +140,8 @@ int add_to_whitelist(const char* file_path) {
 
     // Close the file
     fclose(whitelist_file);
+    log_message(LL_INFO, "Successfully added %s to whitelist", file_path);
+
     return 0;
 }
 
@@ -176,6 +178,27 @@ void restore_quarantined_file(const char* file_name) {
     } else {
         log_message(LL_ERROR, "Could not find file: %s to restore please use pproc quarantine -l to see options", file_name);
     }
+
+    log_message(LL_INFO, "Successfully restored file %s", file_name);
+}
+
+int clean_quarantine_dir() {
+    //clear log 
+    if (truncate("/usr/local/etc/pproc/quarantine_log.txt", 0) != 0) {
+        perror("Failed to truncate whitelist");
+        return -1;
+    }
+    log_message(LL_DEBUG, "Cleared log file /usr/local/etc/pproc/quarantine_log.txt");
+
+    if (system("rm /var/pproc/quarantine/*") == -1) {
+        perror("Could not delete files in quarantine dir");
+        return -1;
+    };
+
+    log_message(LL_DEBUG, "Cleaned quarantined files");
+    log_message(LL_INFO, "Successfully Cleaned quarantined files");
+
+    return 0;
 }
 
 int get_user_input(char *prompt)
