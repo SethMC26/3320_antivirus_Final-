@@ -57,7 +57,7 @@ int handle_malicious_file(const char* target_file) {
     if (get_user_input("\nWould you like to remove the file Y/N:") == 1) {
         log_message(LL_INFO, "Removing file %s", target_file);
         //remove file and check for errors 
-        if (remove(target_file) != 0) {
+        if (remove(quaratine_filepath) != 0) {
             log_message(LL_ERROR, "Failed to remove file: %s", strerror(errno));
             return -1;
         }

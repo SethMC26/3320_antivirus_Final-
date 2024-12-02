@@ -28,7 +28,7 @@ sudo touch /var/log/pproc.log
 sudo chmod 666 /var/log/pproc.log
 
 # Compile the source files for the CLI program (pproc)
-gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" -pthread $SRC_FILES -o "$OUTPUT_BINARY" -lcrypto 
+sudo gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" -pthread $SRC_FILES -o "$OUTPUT_BINARY" -lcrypto 
 
 # Check if compilation succeeded for the CLI program
 if [ $? -ne 0 ]; then
@@ -39,7 +39,7 @@ echo "Successfully compiled pproc CLI"
 
 # Now compile the service program (pproc-service), explicitly including the necessary source files
 #Note we should find a better way to do this
-gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" \
+sudo gcc -g -Wall -Wextra -I"$PROJECT_ROOT/src" \
     "$PROJECT_ROOT/src/pproc-service.c" \
     "$PROJECT_ROOT/src/Utils/scanner.c" \
    "$PROJECT_ROOT/src/Crypto/fingerprint.c" \
