@@ -70,18 +70,10 @@ void print_usage(const char *program_name) {
     printf("\n---- Quarantine Commands ----\n");
     printf("  -l, --list                  List all files in quarantine.\n");
     printf("  -r, --restore <file_name>   Restore a file from quarantine.\n");
+    printf("  -c, --clean                 Removes all files in quarantine.\n");
     
     printf("\n---- Utility Commands ----\n");
     printf("  get-hash <file_path>        Get the hash of a file.\n");
-
-    printf("\n---- Examples ----\n");
-    printf("  %s scan /path/to/file            Scan a specific file for malware.\n", program_name);
-    printf("  %s scan -d /path/to/directory    Scan all files in a directory.\n", program_name);
-    printf("  %s scan -a                       Scan the entire system for malware.\n", program_name);
-    printf("  %s whitelist --add /path/to/file Add a file to the whitelist.\n", program_name);
-    printf("  %s schedule \"0 0 * * *\" /path    Schedule a nightly scan at midnight.\n", program_name);
-    printf("  %s quarantine --list             List all files in quarantine.\n", program_name);
-    printf("  %s quarantine --restore file.txt Restore a quarantined file.\n", program_name);
 
     printf("\nNote: Some commands require root privileges. Run with sudo if needed.\n");
 }
@@ -279,6 +271,8 @@ int main(int argc, char* argv[]) {
             system("cat /usr/local/etc/pproc/quarantine_log.txt");
             return 0;
         }
+
+
         //restore files 
         else if((strcmp(argv[2], "-r") == 0) || (strcmp(argv[2], "--restore") == 0)) {
             if (argc < 4) {
@@ -289,6 +283,14 @@ int main(int argc, char* argv[]) {
             check_if_root();
             //restore file 
             restore_quarantined_file(argv[3]);
+            return 0;
+        }
+
+        //clean files 
+        else if((strcmp(argv[2], "-c") == 0) || (strcmp(argv[2], "--clean") == 0)) {
+            check_if_root();
+            //clean the file 
+            clean_quarantine_dir();
             return 0;
         }
 

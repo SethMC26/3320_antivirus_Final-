@@ -71,7 +71,7 @@ int scan_file(char *target_file)
     scan_result = scan_hashes(target_sha1_hash, target_file, "/usr/local/share/pproc/sha1-hashes.txt", SHA1_BUFFER_SIZE);
 
     if (scan_result == 1) {
-        log_message(LL_INFO, "Malicious file detected (SHA1) in %s", target_file);
+        log_message(LL_DEBUG, "Malicious file detected (SHA1) in %s", target_file);
         return 0;
     } else if (scan_result == -1) {
         log_message(LL_ERROR, "Could not scan sha1 hash list for %s", target_file);
@@ -93,7 +93,7 @@ int scan_file(char *target_file)
 
     if (scan_result == 1)
     {
-        log_message(LL_WARNING, "Malicious file detected (SHA256) in %s", target_file);
+        log_message(LL_DEBUG, "Malicious file detected (SHA256) in %s", target_file);
         return 0;
     }
     else if (scan_result == -1)
@@ -116,7 +116,7 @@ int scan_file(char *target_file)
     scan_result = scan_hashes(target_md5_hash, target_file, "/usr/local/share/pproc/md5-hashes.txt", MD5_BUFFER_SIZE);
     if (scan_result == 1)
     {
-        log_message(LL_WARNING, "Malicious file detected (MD5) in %s", target_file);
+        log_message(LL_DEBUG, "Malicious file detected (MD5) in %s", target_file);
         return 0;
     }
     else if (scan_result == -1)
