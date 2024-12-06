@@ -59,15 +59,18 @@ void print_usage(const char *program_name) {
     printf("  -a, --all                   Scan the entire system for malware.\n");
     
     printf("\n---- Whitelist Commands ----\n");
+    printf("  whitelist <args> \n");
     printf("  -a, --add <file_path>       Add a file to the whitelist.\n");
     printf("  -l, --list                  List all files in the whitelist.\n");
     
     printf("\n---- Scheduled Scans ----\n");
-    printf("  schedule <cron> <dir>       Schedule a directory scan using cron.\n");
-    printf("  list-schedules              List all scheduled directory scans.\n");
-    printf("  delete-schedule             Delete a scheduled directory scan.\n");
+    printf("  schedule <args>             Schedule a directory scan using cron.\n");
+    printf("  -a, --add <cron> <dir>      Add a cron and directory scheduled scan");
+    printf("  -l, --list                  List all scheduled directory scans.\n");
+    printf("  -d, --delete                Delete a scheduled directory scan.\n");
     
     printf("\n---- Quarantine Commands ----\n");
+    printf("  quarantine <args> ");
     printf("  -l, --list                  List all files in quarantine.\n");
     printf("  -r, --restore <file_name>   Restore a file from quarantine.\n");
     printf("  -c, --clean                 Removes all files in quarantine.\n");
@@ -143,27 +146,39 @@ int main(int argc, char* argv[]) {
 
     // Schedule a directory scan
     if (strcmp(argv[1], "schedule") == 0) {
-        if (argc < 4) {
+        if (argc < 3) {
             fprintf(stderr, "Error: Missing arguments for 'schedule'.\n");
             print_usage(argv[0]);
             return 1;
         }
-        const char* schedule = argv[2];
-        const char* directory = argv[3];
-        schedule_directory_scan(schedule, directory);
-        return 0;
-    }
 
-    // List scheduled scans
-    if (strcmp(argv[1], "list-schedules") == 0) {
-        list_scheduled_scans();
-        return 0;
-    }
+        //list schedules 
+        else if ((strcmp(argv[2], "-l")) || (strcmp(argv[2], "--list"))) {
+            list_scheduled_scans();
+            return 0;
+        }
 
-    // Delete a scheduled scan
-    if (strcmp(argv[1], "delete-schedule") == 0) {
-        delete_scheduled_scan();
-        return 0;
+        else if ((strcmp(argv[2], "-d")) || (strcmp(argv[2], "--delete"))) {
+            delete_scheduled_scan();
+            return 0;
+        }
+
+        else if((strcmp(argv[2], "-a")) || (strcmp(argv[2], "--add"))) {
+            if (argc < 5) {
+                fprintf(stderr, "Error: Missing arguments for 'schedule -add' need <cron> <dir>.\n");
+                print_usage(argv[0]);
+                return 1;
+            }
+            const char* schedule = argv[3];
+            const char* directory = argv[4];
+            schedule_directory_scan(schedule, directory);
+            return 0;
+        }
+        else {
+            fprintf(stderr, "Error: Missing arguments for 'schedule'.\n");
+            print_usage(argv[0]);
+            return 1;
+        }
     }
 
     //scan command 

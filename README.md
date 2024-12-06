@@ -5,11 +5,15 @@ Welcome to Penguin Protector, an anti-malware tool for Linux! To keep all of our
 
 # Quick start
 ## Using install script  
+
+Note: Please make sure libssl-dev is installed 
 ```bash 
 git clone https://github.com/SethMC26/FeatherstoneVaranoHoltzman_3320_Final.git
 
-./scripts/build.sh
+./scripts/install.sh
 ```
+
+We have included a build script(Runs uninstall than install), install script and uninstall script. Please use these scripts to build and use our project. 
 
 # Usage 
 
@@ -111,23 +115,36 @@ pproc --help
    @@@@@%%%%%@@@@@@@@@@@        
        @@@%#**+=+ #++==+#       
           #%%#%@@  @@@@@@    
-Penguin Protector Usage: 
+Usage: pproc <command> [options]
 
-Scan for malware 
-  pproc scan <file_path>
-  pproc scan --all
-  pproc scan --directory
-Options:
-  -a, --all		Scan entire system for malware.
-  -d, -dir, --directory	Scan files within a directory.
+---- General Commands ----
+  -h, --help                  Display this help message.
+  -v, --verbose <level>       Set verbosity level (error, warning, info, debug).
 
-Add file to whitelist
-  pproc add <file_path>
+---- Scan Commands ----
+  scan <file_path>            Scan a specific file for malware.
+  -d, --dir <directory_path>  Scan all files within a directory.
+  -a, --all                   Scan the entire system for malware.
 
-Display this message
-  pproc --help
-Options:
-  -h, --help		Display this help message.
+---- Whitelist Commands ----
+  whitelist <args> 
+  -a, --add <file_path>       Add a file to the whitelist.
+  -l, --list                  List all files in the whitelist.
+
+---- Scheduled Scans ----
+  schedule <args>             Schedule a directory scan using cron.
+  -a, --add <cron> <dir>      Add a cron and directory scheduled scan  -l, --list                  List all scheduled directory scans.
+  -d, --delete                Delete a scheduled directory scan.
+
+---- Quarantine Commands ----
+  quarantine <args>   -l, --list                  List all files in quarantine.
+  -r, --restore <file_name>   Restore a file from quarantine.
+  -c, --clean                 Removes all files in quarantine.
+
+---- Utility Commands ----
+  get-hash <file_path>        Get the hash of a file.
+
+Note: Some commands require root privileges. Run with sudo if needed.
 
 ```
 # Features
