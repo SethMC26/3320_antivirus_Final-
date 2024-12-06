@@ -6,12 +6,40 @@
 #include <time.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "Utils/scanner.h"
 #include "pproc-service.h"
 
 // Directory to watch for new files
-#define WATCH_DIR "/home/user/Downloads/"
+#define DEFAULT_DOWNLOADS_DIR "/Downloads"
+
+const char* get_downloads_dir() {
+    static char downloads_dir[PATH_MAX];
+    FILE *fp = popen("xdg-user-dir DOWNLOAD", "r");
+    if (fp == NULL) {
+        perror("Failed to run xdg-user-dir command");
+        return "/tmp"; // Fallback if command fails
+    }
+
+    if (fgets(downloads_dir, sizeof(downloads_dir), fp) != NULL) {
+        // Remove newline character from the end
+        downloads_dir[strcspn(downloads_dir, "\n")] = '\0';
+    } else {
+        // Fallback to home directory if xdg-user-dir fails
+        const char* home_dir = getenv("HOME");
+        if (home_dir) {
+            snprintf(downloads_dir, sizeof(downloads_dir), "%s%s", home_dir, DEFAULT_DOWNLOADS_DIR);
+        } else {
+            strcpy(downloads_dir, "/tmp");
+        }
+    }
+
+    pclose(fp);
+    return downloads_dir;
+}
+
+#define WATCH_DIR get_downloads_dir()
 
 // Log file
 #define LOG_FILE "/var/log/pproc-service.log"
