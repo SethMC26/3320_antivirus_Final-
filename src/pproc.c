@@ -65,12 +65,12 @@ void print_usage(const char *program_name) {
     
     printf("\n---- Scheduled Scans ----\n");
     printf("  schedule <args>             Schedule a directory scan using cron.\n");
-    printf("  -a, --add <cron> <dir>      Add a cron and directory scheduled scan");
+    printf("  -a, --add <cron> <dir>      Add a cron and directory scheduled scan\n");
     printf("  -l, --list                  List all scheduled directory scans.\n");
     printf("  -d, --delete                Delete a scheduled directory scan.\n");
     
     printf("\n---- Quarantine Commands ----\n");
-    printf("  quarantine <args> ");
+    printf("  quarantine <args> \n");
     printf("  -l, --list                  List all files in quarantine.\n");
     printf("  -r, --restore <file_name>   Restore a file from quarantine.\n");
     printf("  -c, --clean                 Removes all files in quarantine.\n");
